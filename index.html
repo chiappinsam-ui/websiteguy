@@ -22,6 +22,21 @@
                     colors: {
                         dark: '#0B1120',
                         card: '#111827',
+                    },
+                    animation: {
+                        text: 'text 16s linear infinite',
+                    },
+                    keyframes: {
+                        text: {
+                            '0%': {
+                                'background-size': '200% 200%',
+                                'background-position': '0% 50%',
+                            },
+                            '100%': {
+                                'background-size': '200% 200%',
+                                'background-position': '200% 50%',
+                            },
+                        },
                     }
                 }
             }
@@ -35,26 +50,50 @@
         html { scroll-behavior: smooth; }
 
         html, body {
-            background-color: transparent !important;
             margin: 0;
-            height: 100%;
+            min-height: 100%;
+            background: transparent !important;
         }
 
-        #root, #__next, .bg-dark, .bg-slate-900, .bg-\[\#0B1120\] {
+        #root, #__next, .bg-dark, .bg-slate-900 {
             background-color: transparent !important;
         }
 
-        #canvas-container {
-            position: fixed !important;
-            top: 0;
-            left: 0;
-            width: 100vw !important;
-            height: 100vh !important;
-            z-index: -1;
+        /* Background stack for cross-fade */
+        /* keep the backgrounds behind content, but NOT behind the body's background */
+        #bg-stack {
+            position: fixed;
+            inset: 0;
+            z-index: 0; /* was -1 */
             pointer-events: none;
             overflow: hidden;
-            transition: opacity 0.6s ease;
-            background-color: #0B1120;
+            background: #0B1120; /* fallback instead of black */
+        }
+        /* lift all your page content above the bg stack */
+        body > :not(#bg-stack) {
+            position: relative;
+            z-index: 1;
+        }
+        .bg-layer {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 900ms ease, filter 900ms ease;
+            will-change: opacity, filter;
+            pointer-events: none;
+        }
+        .bg-layer.is-on {
+            opacity: 1;
+            filter: blur(0px);
+        }
+        .bg-layer.is-off {
+            opacity: 0;
+            filter: blur(2px);
+        }
+        @media (prefers-reduced-motion: reduce){
+            .bg-layer{ transition: none; filter: none; }
         }
 
         /* Make cards semi-transparent glass */
@@ -64,48 +103,134 @@
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
         }
 
+        #canvas-container,
         #react-bg-container {
-            position: fixed !important;
-            top: 0;
-            left: 0;
-            width: 100vw !important;
-            height: 100vh !important;
-            z-index: -1;
-            pointer-events: none;
-            overflow: hidden;
-            opacity: 0;
-            transition: opacity 0.6s ease;
-            background-color: #000;
+            background-color: transparent !important;
         }
 
         #react-bg-container *, #react-bg-container canvas {
             pointer-events: none !important;
         }
+
+        /* Electric Border CSS */
+        .electric-border {
+            --electric-border-color: #7df9ff;
+            --eb-border-width: 2px;
+            position: relative;
+            border-radius: inherit;
+            isolation: isolate;
+            background: transparent;
+        }
+
+        .eb-svg {
+            position: absolute;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+
+        .eb-content {
+            position: relative;
+            border-radius: inherit;
+            z-index: 10;
+            height: 100%;
+        }
+
+        .eb-layers {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            pointer-events: none;
+            z-index: 2;
+            overflow: visible;
+        }
+
+        .eb-stroke, .eb-glow-1, .eb-glow-2, .eb-background-glow {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            box-sizing: border-box;
+            pointer-events: none;
+        }
+
+        .eb-stroke {
+            border: var(--eb-border-width) solid var(--electric-border-color);
+        }
+
+        .eb-glow-1 {
+            border: var(--eb-border-width) solid var(--electric-border-color);
+            opacity: 0.5;
+            filter: blur(4px);
+        }
+
+        .eb-glow-2 {
+            border: var(--eb-border-width) solid white;
+            opacity: 0.5;
+            filter: blur(10px);
+        }
+
     </style>
 </head>
 <body class="text-slate-200 antialiased selection:bg-blue-500 selection:text-white">
-    <div id="canvas-container"></div>
-    <div id="react-bg-container"></div>
+    <div id="bg-stack">
+        <div id="canvas-container" class="bg-layer is-off"></div>
+        <div id="react-bg-container" class="bg-layer is-on"></div>
+    </div>
 
-    <nav class="border-b border-white/5 bg-[#0B1120]/80 backdrop-blur-sm sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-2 font-bold text-xl tracking-tight">
-                <span class="text-blue-500">The</span>
-                <span class="text-white">WebsiteGuy</span>
+    <nav class="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-5xl 
+            bg-gray-950/90 backdrop-blur-xl border border-cyan-500/30 
+            rounded-full px-6 py-3 transition-all duration-300
+            shadow-[0_0_30px_-5px_rgba(6,182,212,0.5)] hover:shadow-[0_0_50px_-10px_rgba(6,182,212,0.7)]">
+        
+        <div class="flex items-center justify-between w-full">
+            <div class="flex-shrink-0 w-32 mr-auto">
+                <a href="#" class="block text-white hover:text-cyan-400 transition-colors drop-shadow-[0_0_10px_rgba(6,182,212,0.8)]">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                        <circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="4" />
+                    </svg>
+                </a>
             </div>
 
-            <div class="flex items-center gap-4">
-                <div class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
-                    <a href="#" class="hover:text-blue-400 transition-colors">Home</a>
-                    <a href="#" class="hover:text-blue-400 transition-colors">About</a>
-                    <a href="#" class="hover:text-blue-400 transition-colors">Contact</a>
-                    <a href="#" class="hover:text-blue-400 transition-colors">Subscription</a>
-                    <a href="#" class="hover:text-blue-400 transition-colors">Packages</a>
-                </div>
-                <button id="bg-toggle-btn" class="inline-flex items-center gap-2 text-xs font-semibold text-white px-3 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors">
-                    Toggle Background
+            <div class="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
+                <a href="#" class="text-sm font-medium text-gray-300 transition-all hover:text-white hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">
+                    Home
+                </a>
+                <a href="#" class="text-sm font-medium text-gray-300 transition-all hover:text-cyan-400 hover:drop-shadow-[0_0_8px_rgba(34,211,238,1)]">
+                    Apps
+                </a>
+                <a href="#" class="text-sm font-medium text-gray-300 transition-all hover:text-cyan-400 hover:drop-shadow-[0_0_8px_rgba(34,211,238,1)]">
+                    Websites
+                </a>
+                <a href="#" class="text-sm font-medium text-gray-300 transition-all hover:text-cyan-400 hover:drop-shadow-[0_0_8px_rgba(34,211,238,1)]">
+                    Contact
+                </a>
+                <a href="https://github.com/chiappinsam-ui/websiteguy" target="_blank" rel="noreferrer" class="text-sm font-medium text-gray-300 transition-all hover:text-cyan-400 hover:drop-shadow-[0_0_8px_rgba(34,211,238,1)]">
+                    GitHub
+                </a>
+            </div>
+
+            <div class="hidden md:flex items-center justify-end w-32 ml-auto">
+                <button class="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 
+                           px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all 
+                           shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)]">
+                    Start
                 </button>
             </div>
+
+            <button id="menuToggle" class="md:hidden text-gray-300 hover:text-white ml-auto">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+        </div>
+
+        <div id="mobileMenu" class="hidden absolute top-full left-0 right-0 mt-4 bg-gray-950/95 backdrop-blur-md border border-gray-800 rounded-2xl p-6 flex-col items-center gap-4 text-center shadow-2xl z-40">
+            <a class="text-gray-300 hover:text-cyan-400 text-lg font-medium" href="#">Home</a>
+            <a class="text-gray-300 hover:text-cyan-400 text-lg font-medium" href="#">Apps</a>
+            <a class="text-gray-300 hover:text-cyan-400 text-lg font-medium" href="#">Websites</a>
+            <a class="text-gray-300 hover:text-cyan-400 text-lg font-medium" href="#">Contact</a>
+            <a class="text-gray-300 hover:text-cyan-400 text-lg font-medium" href="https://github.com/chiappinsam-ui/websiteguy" target="_blank" rel="noreferrer">GitHub</a>
+            <button class="w-full bg-cyan-600 text-white py-3 rounded-xl font-bold mt-2 shadow-[0_0_15px_rgba(6,182,212,0.4)]">
+                Start Project
+            </button>
         </div>
     </nav>
 
@@ -113,21 +238,38 @@
         <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-blue-600/20 blur-[100px] rounded-full pointer-events-none"></div>
 
         <div class="max-w-4xl mx-auto text-center relative z-10">
-            <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6">
-                <span class="block text-white mb-2">Build Smarter.</span>
-                <span class="bg-gradient-to-r from-blue-500 to-cyan-400 bg-clip-text text-transparent">
-                    Build Properly.
-                </span>
-            </h1>
-            
-            <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-                Get custom, hand-coded websites that deliver speed and unique design, beating the limitations of proprietary builders.
-            </p>
+            <div class="h-[40rem] w-full bg-transparent flex flex-col items-center justify-center overflow-hidden rounded-md">
+                <div class="relative z-20 flex flex-col items-center">
+                    <div class="w-full h-32 flex items-center justify-center overflow-hidden">
+                        <div id="vaporize-text-cycle" class="w-full h-full"></div>
+                    </div>
+                    <h1 class="md:text-7xl text-3xl lg:text-9xl font-bold text-center text-white relative z-20 mt-2">
+                        <span class="text-transparent bg-clip-text animate-text bg-[url('https://plus.unsplash.com/premium_photo-1661882403999-46081e67c401?w=900&auto=format&fit=crop&q=60')] bg-center bg-cover">
+                            Build Properly.
+                        </span>
+                    </h1>
+                </div>
 
-            <button class="group relative inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-lg font-semibold transition-all duration-300 shadow-[0_0_20px_-5px_rgba(37,99,235,0.5)] hover:shadow-[0_0_25px_-5px_rgba(37,99,235,0.6)]">
-                START PROJECT INQUIRY
-                <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
-            </button>
+                <div class="w-[40rem] h-40 relative mt-4">
+                    <div class="absolute inset-x-20 top-0 bg-gradient-to-r from-transparent via-indigo-500 to-transparent h-[2px] w-3/4 blur-sm"></div>
+                    <div class="absolute inset-x-20 top-0 bg-gradient-to-r from-transparent via-indigo-500 to-transparent h-px w-3/4"></div>
+                    <div class="absolute inset-x-60 top-0 bg-gradient-to-r from-transparent via-sky-500 to-transparent h-[5px] w-1/4 blur-sm"></div>
+                    <div class="absolute inset-x-60 top-0 bg-gradient-to-r from-transparent via-sky-500 to-transparent h-px w-1/4"></div>
+                    
+                    <div id="sparkles-hero" class="w-full h-full"></div>
+                    
+                    <div class="absolute inset-0 w-full h-full bg-transparent [mask-image:radial-gradient(350px_200px_at_top,transparent_20%,white)]"></div>
+                </div>
+
+            <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mt-10 leading-relaxed">
+                Get custom, hand-coded websites that deliver speed and unique design, beating the limitations of proprietary builders.
+                </p>
+
+                <button class="mt-8 group relative inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-lg font-semibold transition-all duration-300 shadow-[0_0_20px_-5px_rgba(37,99,235,0.5)] hover:shadow-[0_0_25px_-5px_rgba(37,99,235,0.6)]">
+                    START PROJECT INQUIRY
+                    <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+                </button>
+            </div>
         </div>
     </section>
 
@@ -143,34 +285,40 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-card border border-slate-800 p-8 rounded-2xl hover:border-slate-700 transition-colors group">
-                    <div class="w-12 h-12 bg-slate-800/50 rounded-lg flex items-center justify-center mb-6 group-hover:bg-slate-800 transition-colors">
-                        <i data-lucide="rocket" class="text-pink-500"></i>
+                <div class="electric-border bg-card border border-slate-800 rounded-2xl hover:border-slate-700 transition-colors group">
+                    <div class="eb-content p-8">
+                        <div class="w-12 h-12 bg-slate-800/50 rounded-lg flex items-center justify-center mb-6 group-hover:bg-slate-800 transition-colors">
+                            <i data-lucide="rocket" class="text-pink-500"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3">Maximum Performance</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Lean, clean code ensures lightning-fast load speeds, crucial for conversion and SEO.
+                        </p>
                     </div>
-                    <h3 class="text-xl font-bold text-white mb-3">Maximum Performance</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed">
-                        Lean, clean code ensures lightning-fast load speeds, crucial for conversion and SEO.
-                    </p>
                 </div>
 
-                <div class="bg-card border border-slate-800 p-8 rounded-2xl hover:border-slate-700 transition-colors group">
-                    <div class="w-12 h-12 bg-slate-800/50 rounded-lg flex items-center justify-center mb-6 group-hover:bg-slate-800 transition-colors">
-                        <i data-lucide="layers" class="text-green-500"></i>
+                <div class="electric-border bg-card border border-slate-800 rounded-2xl hover:border-slate-700 transition-colors group">
+                    <div class="eb-content p-8">
+                        <div class="w-12 h-12 bg-slate-800/50 rounded-lg flex items-center justify-center mb-6 group-hover:bg-slate-800 transition-colors">
+                            <i data-lucide="layers" class="text-green-500"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3">Unbeatable Value</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            You have the option for a subscription, or a one time purchase to be customized to your liking.
+                        </p>
                     </div>
-                    <h3 class="text-xl font-bold text-white mb-3">Unbeatable Value</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed">
-                        You have the option for a subscription, or a one time purchase to be customized to your liking.
-                    </p>
                 </div>
 
-                <div class="bg-card border border-slate-800 p-8 rounded-2xl hover:border-slate-700 transition-colors group">
-                    <div class="w-12 h-12 bg-slate-800/50 rounded-lg flex items-center justify-center mb-6 group-hover:bg-slate-800 transition-colors">
-                        <i data-lucide="sparkles" class="text-amber-400"></i>
+                <div class="electric-border bg-card border border-slate-800 rounded-2xl hover:border-slate-700 transition-colors group">
+                    <div class="eb-content p-8">
+                        <div class="w-12 h-12 bg-slate-800/50 rounded-lg flex items-center justify-center mb-6 group-hover:bg-slate-800 transition-colors">
+                            <i data-lucide="sparkles" class="text-amber-400"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3">Bespoke Design</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            A one-of-a-kind site tailored specifically to your brand identity, not a stock theme.
+                        </p>
                     </div>
-                    <h3 class="text-xl font-bold text-white mb-3">Bespoke Design</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed">
-                        A one-of-a-kind site tailored specifically to your brand identity, not a stock theme.
-                    </p>
                 </div>
             </div>
         </div>
@@ -209,6 +357,559 @@
             © 2025 TheWebsiteGuy | All Rights Reserved | Built with <span class="text-blue-500">code</span>.
         </p>
     </footer>
+
+    <script type="text/babel" data-type="module">
+        import React, { useEffect, useId, useState, useRef } from "https://esm.sh/react@18.2.0";
+        import { createRoot } from "https://esm.sh/react-dom@18.2.0/client";
+        import Particles, { initParticlesEngine } from "https://esm.sh/@tsparticles/react@3.0.0?external=react,react-dom";
+        import { loadSlim } from "https://esm.sh/@tsparticles/slim@3.9.1";
+        import { motion, useAnimation } from "https://esm.sh/framer-motion@12.23.26?external=react,react-dom";
+        import clsx from "https://esm.sh/clsx@2.1.1";
+        import { twMerge } from "https://esm.sh/tailwind-merge@3.4.0";
+
+        const cn = (...inputs) => twMerge(clsx(...inputs));
+
+        const SparklesCore = (props) => {
+            const { id, className, background, minSize, maxSize, speed, particleColor, particleDensity } = props;
+            const [init, setInit] = useState(false);
+            const moveSpeed = speed ? { min: speed * 0.5, max: speed } : { min: 0.1, max: 1 };
+            const opacitySpeed = speed ? Math.max(speed * 2, 4) : 4;
+
+            useEffect(() => {
+                initParticlesEngine(async (engine) => {
+                    await loadSlim(engine);
+                }).then(() => {
+                    setInit(true);
+                });
+            }, []);
+
+            const controls = useAnimation();
+
+            const particlesLoaded = async (container) => {
+                if (container) {
+                    controls.start({
+                        opacity: 1,
+                        transition: {
+                            duration: 1,
+                        },
+                    });
+                }
+            };
+
+            const generatedId = useId();
+            return (
+                <motion.div animate={controls} className={cn("opacity-0", className)}>
+                    {init && (
+                        <Particles
+                            id={id || generatedId}
+                            className={cn("h-full w-full")}
+                            particlesLoaded={particlesLoaded}
+                            options={{
+                                background: {
+                                    color: {
+                                        value: background || "#0d47a1",
+                                    },
+                                },
+                                fullScreen: {
+                                    enable: false,
+                                    zIndex: 1,
+                                },
+                                fpsLimit: 120,
+                                interactivity: {
+                                    events: {
+                                        onClick: {
+                                            enable: true,
+                                            mode: "push",
+                                        },
+                                        onHover: {
+                                            enable: false,
+                                            mode: "repulse",
+                                        },
+                                        resize: true,
+                                    },
+                                    modes: {
+                                        push: {
+                                            quantity: 4,
+                                        },
+                                        repulse: {
+                                            distance: 200,
+                                            duration: 0.4,
+                                        },
+                                    },
+                                },
+                                particles: {
+                                    bounce: {
+                                        horizontal: { value: 1 },
+                                        vertical: { value: 1 },
+                                    },
+                                    collisions: {
+                                        absorb: { speed: 2 },
+                                        bounce: {
+                                            horizontal: { value: 1 },
+                                            vertical: { value: 1 },
+                                        },
+                                        enable: false,
+                                        maxSpeed: 50,
+                                        mode: "bounce",
+                                        overlap: { enable: true, retries: 0 },
+                                    },
+                                    color: {
+                                        value: particleColor || "#ffffff",
+                                        animation: {
+                                            h: { count: 0, enable: false, speed: 1, decay: 0, delay: 0, sync: true, offset: 0 },
+                                            s: { count: 0, enable: false, speed: 1, decay: 0, delay: 0, sync: true, offset: 0 },
+                                            l: { count: 0, enable: false, speed: 1, decay: 0, delay: 0, sync: true, offset: 0 },
+                                        },
+                                    },
+                                    effect: {
+                                        close: true,
+                                        fill: true,
+                                        options: {},
+                                        type: undefined,
+                                    },
+                                    groups: {},
+                                    move: {
+                                        angle: { offset: 0, value: 90 },
+                                        attract: { distance: 200, enable: false, rotate: { x: 3000, y: 3000 } },
+                                        center: { x: 50, y: 50, mode: "percent", radius: 0 },
+                                        decay: 0,
+                                        distance: {},
+                                        direction: "none",
+                                        drift: 0,
+                                        enable: true,
+                                        gravity: { acceleration: 9.81, enable: false, inverse: false, maxSpeed: 50 },
+                                        path: { clamp: true, delay: { value: 0 }, enable: false, options: {} },
+                                        outModes: { default: "out" },
+                                        random: false,
+                                        size: false,
+                                        speed: moveSpeed,
+                                        spin: { acceleration: 0, enable: false },
+                                        straight: false,
+                                        trail: { enable: false, length: 10, fill: {} },
+                                        vibrate: false,
+                                        warp: false,
+                                    },
+                                    number: {
+                                        density: { enable: true, width: 400, height: 400 },
+                                        limit: { mode: "delete", value: 0 },
+                                        value: particleDensity || 120,
+                                    },
+                                    opacity: {
+                                        value: { min: 0.1, max: 1 },
+                                        animation: {
+                                            count: 0,
+                                            enable: true,
+                                            speed: opacitySpeed,
+                                            decay: 0,
+                                            delay: 0,
+                                            sync: false,
+                                            mode: "auto",
+                                            startValue: "random",
+                                            destroy: "none",
+                                        },
+                                    },
+                                    reduceDuplicates: false,
+                                    shadow: {
+                                        blur: 0,
+                                        color: { value: "#000" },
+                                        enable: false,
+                                        offset: { x: 0, y: 0 },
+                                    },
+                                    shape: {
+                                        close: true,
+                                        fill: true,
+                                        options: {},
+                                        type: "circle",
+                                    },
+                                    size: {
+                                        value: { min: minSize || 1, max: maxSize || 3 },
+                                        animation: {
+                                            count: 0,
+                                            enable: false,
+                                            speed: 5,
+                                            decay: 0,
+                                            delay: 0,
+                                            sync: false,
+                                            mode: "auto",
+                                            startValue: "random",
+                                            destroy: "none",
+                                        },
+                                    },
+                                    stroke: { width: 0 },
+                                    zIndex: { value: 0, opacityRate: 1, sizeRate: 1, velocityRate: 1 },
+                                    destroy: {
+                                        bounds: {},
+                                        mode: "none",
+                                        split: {
+                                            count: 1,
+                                            factor: { value: 3 },
+                                            rate: { value: { min: 4, max: 9 } },
+                                            sizeOffset: true,
+                                        },
+                                    },
+                                    roll: {
+                                        darken: { enable: false, value: 0 },
+                                        enable: false,
+                                        enlighten: { enable: false, value: 0 },
+                                        mode: "vertical",
+                                        speed: 25,
+                                    },
+                                    tilt: {
+                                        value: 0,
+                                        animation: { enable: false, speed: 0, decay: 0, sync: false },
+                                        direction: "clockwise",
+                                        enable: false,
+                                    },
+                                    twinkle: {
+                                        lines: { enable: false, frequency: 0.05, opacity: 1 },
+                                        particles: { enable: false, frequency: 0.05, opacity: 1 },
+                                    },
+                                    wobble: {
+                                        distance: 5,
+                                        enable: false,
+                                        speed: { angle: 50, move: 10 },
+                                    },
+                                    life: {
+                                        count: 0,
+                                        delay: { value: 0, sync: false },
+                                        duration: { value: 0, sync: false },
+                                    },
+                                    rotate: {
+                                        value: 0,
+                                        animation: { enable: false, speed: 0, decay: 0, sync: false },
+                                        direction: "clockwise",
+                                        path: false,
+                                    },
+                                    orbit: {
+                                        animation: { count: 0, enable: false, speed: 1, decay: 0, delay: 0, sync: false },
+                                        enable: false,
+                                        opacity: 1,
+                                        rotation: { value: 45 },
+                                        width: 1,
+                                    },
+                                    links: {
+                                        blink: false,
+                                        color: { value: "#fff" },
+                                        consent: false,
+                                        distance: 100,
+                                        enable: false,
+                                        frequency: 1,
+                                        opacity: 1,
+                                        shadow: { blur: 5, color: { value: "#000" }, enable: false },
+                                        triangles: { enable: false, frequency: 1 },
+                                        width: 1,
+                                        warp: false,
+                                    },
+                                    repulse: { value: 0, enabled: false, distance: 1, duration: 1, factor: 1, speed: 1 },
+                                },
+                                detectRetina: true,
+                            }}
+                        />
+                    )}
+                </motion.div>
+            );
+        };
+
+        // --- HELPER FUNCTIONS FOR PHYSICS & MATH ---
+
+        const parseColor = (color) => {
+            const div = document.createElement("div");
+            div.style.color = color;
+            document.body.appendChild(div);
+            const rgba = window.getComputedStyle(div).color;
+            document.body.removeChild(div);
+            const match = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+            if (match) {
+                return `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${match[4] || 1})`;
+            }
+            return "rgba(255, 255, 255, 1)";
+        };
+
+        const calculateVaporizeSpread = (fontSize) => {
+            const size = typeof fontSize === "string" ? parseInt(fontSize) : fontSize;
+            const points = [{ size: 20, spread: 0.2 }, { size: 50, spread: 0.5 }, { size: 100, spread: 1.5 }];
+            if (size <= points[0].size) return points[0].spread;
+            if (size >= points[points.length - 1].size) return points[points.length - 1].spread;
+            let i = 0;
+            while (i < points.length - 1 && points[i + 1].size < size) i++;
+            const p1 = points[i];
+            const p2 = points[i + 1];
+            return p1.spread + (size - p1.size) * (p2.spread - p1.spread) / (p2.size - p1.size);
+        };
+
+        // Physics update logic
+        const updateParticles = (particles, vaporizeX, deltaTime, spread, duration, direction) => {
+            let allVaporized = true;
+            particles.forEach(p => {
+                const shouldVaporize = direction === "left-to-right" ? p.originalX <= vaporizeX : p.originalX >= vaporizeX;
+                
+                if (shouldVaporize) {
+                    if (p.speed === 0) {
+                        // Initialize explosion
+                        p.angle = Math.random() * Math.PI * 2;
+                        p.speed = (Math.random() * 1 + 0.5) * spread;
+                        p.vx = Math.cos(p.angle) * p.speed;
+                        p.vy = Math.sin(p.angle) * p.speed;
+                    }
+
+                    // Apply Physics
+                    const dx = p.originalX - p.x;
+                    const dy = p.originalY - p.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    const damping = Math.max(0.95, 1 - dist / (100 * spread)); // Drag
+
+                    p.vx = (p.vx + (Math.random() - 0.5) * spread * 3) * damping;
+                    p.vy = (p.vy + (Math.random() - 0.5) * spread * 3) * damping;
+
+                    p.x += p.vx * deltaTime * 20;
+                    p.y += p.vy * deltaTime * 10;
+                    
+                    // Fade out
+                    p.opacity = Math.max(0, p.opacity - deltaTime * (0.5 * (2000/duration)));
+                    
+                    if (p.opacity > 0.01) allVaporized = false;
+                } else {
+                    allVaporized = false;
+                }
+            });
+            return allVaporized;
+        };
+
+        const VaporizeTextCycle = React.memo((props) => {
+            const {
+                texts = ["Build Smarter.", "Build Faster."],
+                font = { fontFamily: "Inter, sans-serif", fontSize: "80px", fontWeight: 700 },
+                color = "#ffffff",
+                spread = 5,
+                density = 5,
+                animation = { duration: 1.5, delay: 0.5 }, // Interpreted as vaporizeDuration and waitDuration
+                alignment = "center",
+            } = props;
+
+            const canvasRef = useRef(null);
+            const containerRef = useRef(null);
+            const particlesRef = useRef([]);
+            const animationFrameRef = useRef(null);
+            
+            // State
+            const [currentTextIndex, setCurrentTextIndex] = useState(0);
+            const [phase, setPhase] = useState("static"); // static, vaporizing, fadingIn, waiting
+            const [wrapperSize, setWrapperSize] = useState({ width: 0, height: 0 });
+            
+            // Refs for animation progress
+            const progressRef = useRef(0);
+            const fadeOpacityRef = useRef(0);
+
+            // 1. Handle Resize
+            useEffect(() => {
+                const handleResize = () => {
+                    if (containerRef.current) {
+                        setWrapperSize({
+                            width: containerRef.current.clientWidth,
+                            height: containerRef.current.clientHeight
+                        });
+                    }
+                };
+                handleResize();
+                window.addEventListener("resize", handleResize);
+                return () => window.removeEventListener("resize", handleResize);
+            }, []);
+
+            // 2. Main Animation Loop
+            useEffect(() => {
+                if (!wrapperSize.width) return;
+                const canvas = canvasRef.current;
+                const ctx = canvas?.getContext("2d");
+                if (!canvas || !ctx) return;
+
+                // Configuration
+                const dpr = window.devicePixelRatio || 1;
+                const vaporizeDuration = (animation.duration || 2) * 1000;
+                const fadeInDuration = 1000;
+                const waitDuration = (animation.delay || 0.5) * 1000;
+                
+                // Font setup
+                const fontSizeVal = parseInt(font.fontSize?.replace("px", "") || "80", 10);
+                const calcSpread = calculateVaporizeSpread(fontSizeVal) * spread;
+                const fontStr = `${font.fontWeight || 700} ${fontSizeVal * dpr}px ${font.fontFamily || "Inter, sans-serif"}`;
+                
+                let lastTime = performance.now();
+
+                // PARTICLE CREATION
+                const createParticles = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = parseColor(color);
+                    ctx.font = fontStr;
+                    ctx.textAlign = alignment;
+                    ctx.textBaseline = "middle";
+                    
+                    const x = alignment === "center" ? canvas.width/2 : alignment === "left" ? 0 : canvas.width;
+                    const y = canvas.height/2;
+                    const text = texts[currentTextIndex];
+                    
+                    // Get text metrics for scanning
+                    const metrics = ctx.measureText(text);
+                    const textWidth = metrics.width;
+                    let textLeft = alignment === "center" ? x - textWidth/2 : alignment === "left" ? x : x - textWidth;
+                    
+                    canvas.textMeta = { left: textLeft, width: textWidth };
+
+                    // Draw and sample
+                    ctx.fillText(text, x, y);
+                    const idata = ctx.getImageData(0,0, canvas.width, canvas.height);
+                    const data = idata.data;
+                    ctx.clearRect(0,0, canvas.width, canvas.height); // clear after sampling
+
+                    const newParticles = [];
+                    const step = Math.max(1, Math.floor(10 - (density || 5)));
+                    
+                    for(let py=0; py<canvas.height; py+=step) {
+                        for(let px=0; px<canvas.width; px+=step) {
+                            const idx = (py * canvas.width + px) * 4;
+                            if(data[idx+3] > 0) {
+                                newParticles.push({
+                                    x: px, y: py,
+                                    originalX: px, originalY: py,
+                                    color: `rgba(${data[idx]},${data[idx+1]},${data[idx+2]},`,
+                                    opacity: data[idx+3]/255,
+                                    originalAlpha: data[idx+3]/255,
+                                    vx: 0, vy: 0, speed: 0
+                                });
+                            }
+                        }
+                    }
+                    particlesRef.current = newParticles;
+                };
+
+                // SETUP CANVAS
+                canvas.width = wrapperSize.width * dpr;
+                canvas.height = wrapperSize.height * dpr;
+                canvas.style.width = wrapperSize.width + "px";
+                canvas.style.height = wrapperSize.height + "px";
+                ctx.scale(1, 1); // We handled dpr in sampling
+
+                // Initial Create
+                if (phase === 'static' || phase === 'waiting') {
+                    createParticles();
+                    // Auto-start animation logic
+                    setTimeout(() => setPhase("vaporizing"), 100); 
+                }
+
+                // RENDER LOOP
+                const render = (time) => {
+                    const dt = (time - lastTime) / 1000;
+                    lastTime = time;
+                    
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    if (phase === "static") {
+                        particlesRef.current.forEach(p => {
+                            ctx.fillStyle = p.color + p.opacity + ")";
+                            ctx.fillRect(p.x, p.y, 2, 2); // Slightly larger particles
+                        });
+                    }
+                    else if (phase === "vaporizing") {
+                        progressRef.current += dt * 100 / (vaporizeDuration/1000);
+                        const progress = Math.min(100, progressRef.current);
+                        const meta = canvas.textMeta || {left: 0, width: canvas.width};
+                        const vaporizeX = meta.left + meta.width * (progress/100);
+
+                        const finished = updateParticles(particlesRef.current, vaporizeX, dt, calcSpread, vaporizeDuration, "left-to-right");
+                        
+                        particlesRef.current.forEach(p => {
+                            if(p.opacity > 0) {
+                                ctx.fillStyle = p.color + p.opacity + ")";
+                                ctx.fillRect(p.x, p.y, 2, 2);
+                            }
+                        });
+
+                        if (progress >= 100 && finished) {
+                            setCurrentTextIndex(prev => (prev + 1) % texts.length);
+                            setPhase("fadingIn");
+                            fadeOpacityRef.current = 0;
+                        }
+                    }
+                    else if (phase === "fadingIn") {
+                        fadeOpacityRef.current += dt * 1000 / fadeInDuration;
+                        // Re-draw text with opacity
+                        ctx.fillStyle = parseColor(color);
+                        ctx.font = fontStr;
+                        ctx.textAlign = alignment;
+                        ctx.textBaseline = "middle";
+                        ctx.globalAlpha = Math.min(1, fadeOpacityRef.current);
+                        const x = alignment === "center" ? canvas.width/2 : alignment === "left" ? 0 : canvas.width;
+                        ctx.fillText(texts[currentTextIndex], x, canvas.height/2);
+                        ctx.globalAlpha = 1;
+
+                        if (fadeOpacityRef.current >= 1) {
+                            setPhase("waiting");
+                            setTimeout(() => {
+                                progressRef.current = 0;
+                                setPhase("vaporizing");
+                                // Re-create particles for the NEW text
+                                createParticles();
+                            }, waitDuration);
+                        }
+                    }
+                    else if (phase === "waiting") {
+                         // Just draw the text
+                        ctx.fillStyle = parseColor(color);
+                        ctx.font = fontStr;
+                        ctx.textAlign = alignment;
+                        ctx.textBaseline = "middle";
+                        const x = alignment === "center" ? canvas.width/2 : alignment === "left" ? 0 : canvas.width;
+                        ctx.fillText(texts[currentTextIndex], x, canvas.height/2);
+                    }
+
+                    animationFrameRef.current = requestAnimationFrame(render);
+                };
+
+                animationFrameRef.current = requestAnimationFrame(render);
+
+                return () => {
+                    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+                };
+
+            }, [phase, wrapperSize, texts, currentTextIndex, font, color, spread, density, animation, alignment]);
+
+            return (
+                <div ref={containerRef} className="w-full h-full relative">
+                    <canvas ref={canvasRef} className="block" />
+                </div>
+            );
+        });
+
+        const vaporizeContainer = document.getElementById("vaporize-text-cycle");
+        if (vaporizeContainer) {
+            const vaporizeRoot = createRoot(vaporizeContainer);
+            vaporizeRoot.render(
+                <VaporizeTextCycle
+                    texts={["Build Smarter."]}
+                    font={{ fontFamily: "Inter, sans-serif", fontSize: "80px", fontWeight: 700 }}
+                    color="#ffffff"
+                    spread={3}
+                    density={8}
+                    animation={{ duration: 2, delay: 0.5 }}
+                    alignment="center"
+                />
+            );
+        }
+
+        const sparklesContainer = document.getElementById("sparkles-hero");
+        if (sparklesContainer) {
+            const root = createRoot(sparklesContainer);
+            root.render(
+                <SparklesCore
+                    background="transparent"
+                    minSize={0.6}
+                    maxSize={1.4}
+                    particleDensity={100}
+                    className="w-full h-full"
+                    particleColor="#FFFFFF"
+                />
+            );
+        }
+    </script>
 
     <script>
         lucide.createIcons();
@@ -288,12 +989,26 @@
         const mesh = new THREE.Mesh(geometry, material);
         scene.add(mesh);
 
-        function animate() {
-            material.uniforms.iTime.value += 0.016;
+        let threeRAF = null;
+        function animate(now) {
+            material.uniforms.iTime.value = now * 0.001;
             renderer.render(scene, camera);
-            requestAnimationFrame(animate);
+            threeRAF = requestAnimationFrame(animate);
         }
-        animate();
+        function startThree() {
+            if (threeRAF == null) {
+                threeRAF = requestAnimationFrame(animate);
+            }
+        }
+        function stopThree() {
+            if (threeRAF != null) {
+                cancelAnimationFrame(threeRAF);
+                threeRAF = null;
+            }
+        }
+        stopThree();
+        window.startThree = startThree;
+        window.stopThree = stopThree;
 
         window.addEventListener('resize', () => {
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -355,13 +1070,15 @@
             for (float i=1.; i<12.; i++) {
                 uv+=.1*cos(i*vec2(.1+.01*i, .8)+i*i+T*.5+.1*uv.x);
                 vec2 p=uv;
-                float d=length(p);
+                float d = max(length(p), 0.12);
                 col+=.00125/d*(cos(sin(i)*vec3(1,2,3))+1.);
                 float b=noise(i+p+bg*1.731);
                 col+=.002*b/length(max(p,vec2(b*p.x*.02,p.y)));
                 col=mix(col,vec3(bg*.25,bg*.137,bg*.05),d);
             }
-            O=vec4(col,1);
+            col *= 0.75;
+            col = col / (1.0 + col);
+            O = vec4(col, 1.0);
         }`;
 
         // --- 2. WEBGL CLASSES (Logic Helpers) ---
@@ -369,8 +1086,12 @@
             constructor(canvas, scale) {
                 this.canvas = canvas;
                 this.scale = scale;
-                this.gl = canvas.getContext('webgl2');
-                this.gl.viewport(0, 0, canvas.width * scale, canvas.height * scale);
+                this.gl = canvas.getContext('webgl2', {
+                    alpha: true,
+                    antialias: false,
+                    powerPreference: 'high-performance',
+                });
+                this.gl.viewport(0, 0, canvas.width, canvas.height);
                 this.shaderSource = defaultShaderSource;
                 this.mouseMove = [0, 0];
                 this.mouseCoords = [0, 0];
@@ -395,7 +1116,7 @@
             updatePointerCount(nbr) { this.nbrOfPointers = nbr; }
             updateScale(scale) {
                 this.scale = scale;
-                this.gl.viewport(0, 0, this.canvas.width * scale, this.canvas.height * scale);
+                this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
             }
 
             compile(shader, source) {
@@ -520,18 +1241,24 @@
             const animationFrameRef = useRef();
             const rendererRef = useRef(null);
             const pointersRef = useRef(null);
+            const runningRef = useRef(true);
 
             const resize = () => {
                 if (!canvasRef.current) return;
                 const canvas = canvasRef.current;
-                const dpr = Math.max(1, 0.5 * window.devicePixelRatio);
-                canvas.width = window.innerWidth * dpr;
-                canvas.height = window.innerHeight * dpr;
+                const dpr = Math.min(1.25, window.devicePixelRatio || 1);
+                canvas.width = Math.floor(window.innerWidth * dpr);
+                canvas.height = Math.floor(window.innerHeight * dpr);
                 if (rendererRef.current) rendererRef.current.updateScale(dpr);
             };
 
             const loop = (now) => {
                 if (!rendererRef.current || !pointersRef.current) return;
+                if (!runningRef.current || window.__RUN_REACT_BG === false) {
+                    runningRef.current = false;
+                    animationFrameRef.current = null;
+                    return;
+                }
                 rendererRef.current.updateMouse(pointersRef.current.first);
                 rendererRef.current.updatePointerCount(pointersRef.current.count);
                 rendererRef.current.updatePointerCoords(pointersRef.current.coords);
@@ -543,7 +1270,7 @@
             useEffect(() => {
                 if (!canvasRef.current) return;
                 const canvas = canvasRef.current;
-                const dpr = Math.max(1, 0.5 * window.devicePixelRatio);
+                const dpr = Math.min(1.25, window.devicePixelRatio || 1);
                 rendererRef.current = new WebGLRenderer(canvas, dpr);
                 pointersRef.current = new PointerHandler(canvas, dpr);
                 rendererRef.current.setup();
@@ -552,12 +1279,30 @@
                 if (rendererRef.current.test(defaultShaderSource) === null) {
                     rendererRef.current.updateShader(defaultShaderSource);
                 }
-                loop(0);
+                window.__RUN_REACT_BG = window.__RUN_REACT_BG !== false;
+                window.__startReactBg = () => {
+                    window.__RUN_REACT_BG = true;
+                    runningRef.current = true;
+                    if (!animationFrameRef.current) {
+                        animationFrameRef.current = requestAnimationFrame(loop);
+                    }
+                };
+                window.__stopReactBg = () => {
+                    window.__RUN_REACT_BG = false;
+                    runningRef.current = false;
+                    if (animationFrameRef.current) {
+                        cancelAnimationFrame(animationFrameRef.current);
+                        animationFrameRef.current = null;
+                    }
+                };
+                animationFrameRef.current = requestAnimationFrame(loop);
                 window.addEventListener('resize', resize);
                 return () => {
                     window.removeEventListener('resize', resize);
                     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
                     if (rendererRef.current) rendererRef.current.reset();
+                    window.__startReactBg = undefined;
+                    window.__stopReactBg = undefined;
                 };
             }, []);
 
@@ -571,7 +1316,7 @@
                 <canvas 
                     ref={canvasRef} 
                     className="absolute inset-0 w-full h-full object-cover" 
-                    style={{ background: 'black' }}
+                    style={{ background: 'transparent' }}
                 />
             );
         };
@@ -584,16 +1329,122 @@
         const toggleBtn = document.getElementById('bg-toggle-btn');
         const threeJsCanvas = document.getElementById('canvas-container');
         const reactContainer = document.getElementById('react-bg-container');
-        let isReactBg = false;
+        let showing = 'react';
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-        toggleBtn.addEventListener('click', () => {
-            isReactBg = !isReactBg;
-            if (isReactBg) {
-                threeJsCanvas.style.opacity = '0';
-                reactContainer.style.opacity = '1';
-            } else {
-                threeJsCanvas.style.opacity = '1';
-                reactContainer.style.opacity = '0';
+        const fadeTo = (next) => {
+            if (next === showing) return;
+            if (window.startThree) window.startThree();
+            if (window.__startReactBg) window.__startReactBg();
+
+            const from = next === 'react' ? threeJsCanvas : reactContainer;
+            const to = next === 'react' ? reactContainer : threeJsCanvas;
+
+            from.classList.remove('is-on');
+            from.classList.add('is-off');
+            to.classList.remove('is-off');
+            to.classList.add('is-on');
+
+            const complete = () => {
+                if (next === 'react') {
+                    if (window.stopThree) window.stopThree();
+                } else {
+                    if (window.__stopReactBg) window.__stopReactBg();
+                }
+                showing = next;
+            };
+
+            if (prefersReducedMotion) {
+                complete();
+                return;
+            }
+
+            const onDone = (e) => {
+                if (e.propertyName !== 'opacity') return;
+                from.removeEventListener('transitionend', onDone);
+                complete();
+            };
+            from.addEventListener('transitionend', onDone);
+        };
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                fadeTo(showing === 'react' ? 'three' : 'react');
+            });
+        }
+    </script>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const cards = document.querySelectorAll('.electric-border');
+
+      cards.forEach((card) => {
+        const id = 'eb-' + Math.random().toString(36).substr(2, 9);
+        const filterId = 'turbulent-displace-' + id;
+
+        const svgNS = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(svgNS, "svg");
+        svg.setAttribute("class", "eb-svg");
+        svg.innerHTML = `
+          <defs>
+            <filter id="${filterId}" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
+              <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="3" result="noise1" seed="1" />
+              <feOffset in="noise1" dx="0" dy="0" result="offsetNoise1">
+                <animate attributeName="dy" values="0; 0" dur="2s" repeatCount="indefinite" />
+              </feOffset>
+              <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="3" result="noise2" seed="2" />
+              <feOffset in="noise2" dx="0" dy="0" result="offsetNoise2">
+                 <animate attributeName="dy" values="0; 0" dur="2s" repeatCount="indefinite" />
+              </feOffset>
+              <feComposite in="offsetNoise1" in2="offsetNoise2" result="part1" operator="xor"/>
+              <feDisplacementMap in="SourceGraphic" in2="part1" scale="20" xChannelSelector="R" yChannelSelector="G" />
+            </filter>
+          </defs>
+        `;
+
+        const layers = document.createElement('div');
+        layers.className = 'eb-layers';
+        layers.innerHTML = `
+          <div class="eb-stroke" style="filter: url(#${filterId});"></div>
+          <div class="eb-glow-1" style="filter: url(#${filterId}) blur(2px);"></div>
+          <div class="eb-glow-2" style="filter: url(#${filterId}) blur(5px);"></div>
+        `;
+
+        card.prepend(layers);
+        card.prepend(svg);
+
+        const animateEl = svg.querySelectorAll('animate');
+        
+        const update = () => {
+          const w = card.offsetWidth;
+          const h = card.offsetHeight;
+          animateEl[0]?.setAttribute('values', `${h}; 0`);
+          animateEl[1]?.setAttribute('values', `0; -${h}`);
+        };
+
+        const ro = new ResizeObserver(update);
+        ro.observe(card);
+        update();
+      });
+    });
+    </script>
+
+    <script>
+        const menuToggle = document.getElementById('menuToggle');
+        const mobileMenu = document.getElementById('mobileMenu');
+
+        // Toggle menu visibility
+        menuToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            mobileMenu.classList.toggle('hidden');
+            mobileMenu.classList.toggle('flex');
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!menuToggle.contains(e.target) && !mobileMenu.contains(e.target)) {
+                mobileMenu.classList.add('hidden');
+                mobileMenu.classList.remove('flex');
             }
         });
     </script>
