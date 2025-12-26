@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TheWebsiteGuy</title>
+    <title>TheWebsiteGuy | Build Properly</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.4.0/simplex-noise.min.js"></script>
     
     <script>
         tailwind.config = {
@@ -18,25 +17,12 @@
                 extend: {
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
                     },
                     colors: {
                         dark: '#0B1120',
-                        card: '#111827',
-                    },
-                    animation: {
-                        text: 'text 16s linear infinite',
-                    },
-                    keyframes: {
-                        text: {
-                            '0%': {
-                                'background-size': '200% 200%',
-                                'background-position': '0% 50%',
-                            },
-                            '100%': {
-                                'background-size': '200% 200%',
-                                'background-position': '200% 50%',
-                            },
-                        },
+                        card: '#161b22', 
+                        border: '#30363d',
                     }
                 }
             }
@@ -46,1407 +32,518 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
-        /* Smooth scrolling */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
         html { scroll-behavior: smooth; }
+        html, body { margin: 0; min-height: 100%; background: #0d1117; color: #e6edf3; overflow-x: hidden; }
 
-        html, body {
-            margin: 0;
-            min-height: 100%;
-            background: transparent !important;
-        }
+        /* Background Layers */
+        #bg-stack { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+        .bg-layer { position: absolute; inset: 0; transition: opacity 1s ease; }
+        .bg-layer.active { opacity: 1; }
+        .bg-layer.inactive { opacity: 0; }
 
-        #root, #__next, .bg-dark, .bg-slate-900 {
-            background-color: transparent !important;
-        }
-
-        /* Background stack for cross-fade */
-        /* keep the backgrounds behind content, but NOT behind the body's background */
-        #bg-stack {
-            position: fixed;
-            inset: 0;
-            z-index: 0; /* was -1 */
-            pointer-events: none;
+        /* --- UI STYLES --- */
+        .bento-card {
+            background: rgba(22, 27, 34, 0.6);
+            border: 1px solid rgba(48, 54, 61, 0.6);
+            border-radius: 32px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(20px);
+            transition: transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease, background-color 0.3s ease, color 0.3s ease;
+            position: relative;
             overflow: hidden;
-            background: #0B1120; /* fallback instead of black */
         }
-        /* lift all your page content above the bg stack */
-        body > :not(#bg-stack) {
-            position: relative;
-            z-index: 1;
+        
+        .bento-card:hover {
+            border-color: rgba(56, 189, 248, 0.4);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+            transform: translateY(-6px) scale(1.005);
         }
-        .bg-layer {
+
+        .glow-overlay {
             position: absolute;
             inset: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            transition: opacity 900ms ease, filter 900ms ease;
-            will-change: opacity, filter;
-            pointer-events: none;
-        }
-        .bg-layer.is-on {
-            opacity: 1;
-            filter: blur(0px);
-        }
-        .bg-layer.is-off {
-            opacity: 0;
-            filter: blur(2px);
-        }
-        @media (prefers-reduced-motion: reduce){
-            .bg-layer{ transition: none; filter: none; }
-        }
-
-        /* Make cards semi-transparent glass */
-        .bg-card, .bg-\[\#111827\] {
-            background-color: rgba(17, 24, 39, 0.7) !important;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        }
-
-        #canvas-container,
-        #react-bg-container {
-            background-color: transparent !important;
-        }
-
-        #react-bg-container *, #react-bg-container canvas {
-            pointer-events: none !important;
-        }
-
-        /* Electric Border CSS */
-        .electric-border {
-            --electric-border-color: #7df9ff;
-            --eb-border-width: 2px;
-            position: relative;
-            border-radius: inherit;
-            isolation: isolate;
-            background: transparent;
-        }
-
-        .eb-svg {
-            position: absolute;
-            width: 0;
-            height: 0;
-            pointer-events: none;
-        }
-
-        .eb-content {
-            position: relative;
-            border-radius: inherit;
-            z-index: 10;
-            height: 100%;
-        }
-
-        .eb-layers {
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
+            background: radial-gradient(1200px circle at var(--mouse-x) var(--mouse-y), rgba(255,255,255,0.03), transparent 40%);
             pointer-events: none;
             z-index: 2;
-            overflow: visible;
         }
 
-        .eb-stroke, .eb-glow-1, .eb-glow-2, .eb-background-glow {
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            box-sizing: border-box;
-            pointer-events: none;
+        .btn-primary {
+            background: #ffffff;
+            color: #0f172a;
+            font-weight: 800;
+            padding: 18px 54px;
+            font-size: 1.1rem;
+            border-radius: 9999px;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: 0 0 20px -5px rgba(255, 255, 255, 0.4);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 50px -5px rgba(255, 255, 255, 0.6);
         }
 
-        .eb-stroke {
-            border: var(--eb-border-width) solid var(--electric-border-color);
+        /* --- PAGE SWITCHING ANIMATION --- */
+        .view-section {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+        }
+        .view-section.active {
+            display: block;
+            opacity: 1;
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        .eb-glow-1 {
-            border: var(--eb-border-width) solid var(--electric-border-color);
-            opacity: 0.5;
-            filter: blur(4px);
+        .token-keyword { color: #ff7b72; }
+        .token-function { color: #d2a8ff; }
+        .token-string { color: #a5d6ff; }
+        .token-comment { color: #8b949e; }
+        
+        .graph-path { stroke-dasharray: 2000; stroke-dashoffset: 2000; animation: dash-draw 4s ease-out forwards; }
+        @keyframes dash-draw { to { stroke-dashoffset: 0; } }
+        @keyframes slide-graph { 0% { transform: translateX(0%); } 100% { transform: translateX(-50%); } }
+        .animate-scroll-graph { animation: slide-graph 15s linear infinite; }
+
+        /* --- RGB / GAMER MODE FIXED --- */
+
+        /* 1. The Rainbow Border Cycle */
+        @keyframes rgb-border {
+            0% { border-color: #ff0000; box-shadow: 0 0 20px rgba(255, 0, 0, 0.5); }
+            20% { border-color: #ffff00; box-shadow: 0 0 20px rgba(255, 255, 0, 0.5); }
+            40% { border-color: #00ff00; box-shadow: 0 0 20px rgba(0, 255, 0, 0.5); }
+            60% { border-color: #00ffff; box-shadow: 0 0 20px rgba(0, 255, 255, 0.5); }
+            80% { border-color: #0000ff; box-shadow: 0 0 20px rgba(0, 0, 255, 0.5); }
+            100% { border-color: #ff00ff; box-shadow: 0 0 20px rgba(255, 0, 255, 0.5); }
         }
 
-        .eb-glow-2 {
-            border: var(--eb-border-width) solid white;
-            opacity: 0.5;
-            filter: blur(10px);
+        /* 2. Hue Rotation */
+        @keyframes hue-flow {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
         }
 
+        /* 3. Apply RGB to Content Elements ONLY (Not Body) */
+        /* This fixes the "stuck to page" issue */
+        body.rgb-mode nav,
+        body.rgb-mode main,
+        body.rgb-mode footer,
+        body.rgb-mode #bg-stack {
+            animation: hue-flow 10s linear infinite;
+        }
+
+        /* 4. Apply Rainbow Borders */
+        body.rgb-mode .bento-card,
+        body.rgb-mode nav,
+        body.rgb-mode .btn-primary,
+        body.rgb-mode input,
+        body.rgb-mode textarea {
+            animation: rgb-border 4s linear infinite;
+            border-width: 2px;
+            background: rgba(0, 0, 0, 0.9) !important; /* Darker bg for contrast */
+        }
+
+        /* 5. Button Specific Fix - Keeps it stuck to SCREEN */
+        #bg-toggle-btn {
+            /* Ensure it is always fixed regardless of mode */
+            position: fixed !important;
+            bottom: 40px;
+            right: 40px;
+            z-index: 10000;
+        }
+
+        body.rgb-mode #bg-toggle-btn {
+            /* Style the button itself in RGB mode */
+            background: #000 !important;
+            color: #ffffff !important;
+            border: 2px solid #22c55e;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.7);
+            text-shadow: 0 0 5px rgba(34, 197, 94, 0.5);
+        }
+
+        /* White mode for cards */
+        .bento-card.white-mode-card {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            border-color: #22c55e;
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.5);
+        }
+        .bento-card.white-mode-card * {
+            color: #0f172a !important;
+        }
     </style>
 </head>
-<body class="text-slate-200 antialiased selection:bg-blue-500 selection:text-white">
+<body class="antialiased selection:bg-cyan-900 selection:text-white" onmousemove="updateCards(event)">
+    
     <div id="bg-stack">
-        <div id="canvas-container" class="bg-layer is-off"></div>
-        <div id="react-bg-container" class="bg-layer is-on"></div>
+        <div id="react-bg-container" class="bg-layer active"></div>
+        <div id="canvas-container" class="bg-layer inactive"></div>
     </div>
 
-    <nav class="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-5xl 
-            bg-gray-950/90 backdrop-blur-xl border border-cyan-500/30 
-            rounded-full px-6 py-3 transition-all duration-300
-            shadow-[0_0_30px_-5px_rgba(6,182,212,0.5)] hover:shadow-[0_0_50px_-10px_rgba(6,182,212,0.7)]">
-        
-        <div class="flex items-center justify-between w-full">
-            <div class="flex-shrink-0 w-32 mr-auto">
-                <a href="#" class="block text-white hover:text-cyan-400 transition-colors drop-shadow-[0_0_10px_rgba(6,182,212,0.8)]">
-                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                        <circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="4" />
-                    </svg>
-                </a>
+    <nav class="fixed top-0 w-full z-50 border-b border-white/5 bg-[#0d1117]/80 backdrop-blur-xl h-24 transition-all">
+        <div class="w-full max-w-[1600px] mx-auto h-full flex items-center justify-between px-10">
+            <a href="#home" class="flex items-center gap-4 cursor-pointer">
+                <div class="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/20 group hover:scale-110 transition-transform">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                </div>
+                <span class="font-black text-2xl tracking-tighter text-white">TheWebsiteGuy</span>
+            </a>
+            
+            <div class="hidden lg:flex gap-16 text-sm font-bold text-slate-400 uppercase tracking-widest">
+                <a href="#home" class="nav-link hover:text-white transition-colors text-white">Home</a>
+                <a href="#websites" class="nav-link hover:text-white transition-colors">Websites</a>
+                <a href="#apps" class="nav-link hover:text-white transition-colors">Apps</a>
             </div>
 
-            <div class="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
-                <a href="#" class="text-sm font-medium text-gray-300 transition-all hover:text-white hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">
-                    Home
-                </a>
-                <a href="#" class="text-sm font-medium text-gray-300 transition-all hover:text-cyan-400 hover:drop-shadow-[0_0_8px_rgba(34,211,238,1)]">
-                    Apps
-                </a>
-                <a href="#" class="text-sm font-medium text-gray-300 transition-all hover:text-cyan-400 hover:drop-shadow-[0_0_8px_rgba(34,211,238,1)]">
-                    Websites
-                </a>
-                <a href="#" class="text-sm font-medium text-gray-300 transition-all hover:text-cyan-400 hover:drop-shadow-[0_0_8px_rgba(34,211,238,1)]">
-                    Contact
-                </a>
-                <a href="https://github.com/chiappinsam-ui/websiteguy" target="_blank" rel="noreferrer" class="text-sm font-medium text-gray-300 transition-all hover:text-cyan-400 hover:drop-shadow-[0_0_8px_rgba(34,211,238,1)]">
-                    GitHub
-                </a>
-            </div>
-
-            <div class="hidden md:flex items-center justify-end w-32 ml-auto">
-                <button class="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 
-                           px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all 
-                           shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.6)]">
-                    Start
-                </button>
-            </div>
-
-            <button id="menuToggle" class="md:hidden text-gray-300 hover:text-white ml-auto">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-            </button>
-        </div>
-
-        <div id="mobileMenu" class="hidden absolute top-full left-0 right-0 mt-4 bg-gray-950/95 backdrop-blur-md border border-gray-800 rounded-2xl p-6 flex-col items-center gap-4 text-center shadow-2xl z-40">
-            <a class="text-gray-300 hover:text-cyan-400 text-lg font-medium" href="#">Home</a>
-            <a class="text-gray-300 hover:text-cyan-400 text-lg font-medium" href="#">Apps</a>
-            <a class="text-gray-300 hover:text-cyan-400 text-lg font-medium" href="#">Websites</a>
-            <a class="text-gray-300 hover:text-cyan-400 text-lg font-medium" href="#">Contact</a>
-            <a class="text-gray-300 hover:text-cyan-400 text-lg font-medium" href="https://github.com/chiappinsam-ui/websiteguy" target="_blank" rel="noreferrer">GitHub</a>
-            <button class="w-full bg-cyan-600 text-white py-3 rounded-xl font-bold mt-2 shadow-[0_0_15px_rgba(6,182,212,0.4)]">
-                Start Project
+            <button class="text-sm font-bold text-white bg-white/5 hover:bg-white/10 border border-white/10 px-8 py-3 rounded-xl transition-all hover:border-cyan-500/50">
+                Client Portal
             </button>
         </div>
     </nav>
 
-    <section class="relative pt-24 pb-32 px-6 overflow-hidden">
-        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-blue-600/20 blur-[100px] rounded-full pointer-events-none"></div>
-
-        <div class="max-w-4xl mx-auto text-center relative z-10">
-            <div class="h-[40rem] w-full bg-transparent flex flex-col items-center justify-center overflow-hidden rounded-md">
-                <div class="relative z-20 flex flex-col items-center">
-                    <div class="w-full h-32 flex items-center justify-center overflow-hidden">
-                        <div id="vaporize-text-cycle" class="w-full h-full"></div>
-                    </div>
-                    <h1 class="md:text-7xl text-3xl lg:text-9xl font-bold text-center text-white relative z-20 mt-2">
-                        <span class="text-transparent bg-clip-text animate-text bg-[url('https://plus.unsplash.com/premium_photo-1661882403999-46081e67c401?w=900&auto=format&fit=crop&q=60')] bg-center bg-cover">
-                            Build Properly.
-                        </span>
+    <main class="relative pt-32 pb-32 w-full max-w-[1600px] mx-auto px-6 lg:px-10">
+        
+        <div id="home" class="view-section active space-y-16">
+            <div class="bento-card p-12 lg:p-24 min-h-[85vh] flex flex-col xl:flex-row items-center justify-between gap-20 relative overflow-hidden group">
+                <div class="glow-overlay"></div>
+    
+                <div class="relative z-10 xl:w-[45%] space-y-12">
+                    <h1 class="text-7xl lg:text-[7rem] font-black tracking-tighter leading-[0.9] uppercase">
+                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-500 animate-pulse">Build</span><br>
+                        <span class="text-white drop-shadow-2xl">Properly.</span>
                     </h1>
+                    <p class="text-2xl text-slate-400 max-w-xl leading-relaxed font-light border-l-4 border-cyan-500/50 pl-8">
+                        Stop using generic builders. Get a hand-coded, high-performance digital experience.
+                    </p>
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-10 pt-6">
+                        <button onclick="window.location.hash='websites'" class="btn-primary flex items-center gap-3 group">
+                            View Work
+                            <i data-lucide="arrow-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
+                        </button>
+                    </div>
                 </div>
 
-                <div class="w-[40rem] h-40 relative mt-4">
-                    <div class="absolute inset-x-20 top-0 bg-gradient-to-r from-transparent via-indigo-500 to-transparent h-[2px] w-3/4 blur-sm"></div>
-                    <div class="absolute inset-x-20 top-0 bg-gradient-to-r from-transparent via-indigo-500 to-transparent h-px w-3/4"></div>
-                    <div class="absolute inset-x-60 top-0 bg-gradient-to-r from-transparent via-sky-500 to-transparent h-[5px] w-1/4 blur-sm"></div>
-                    <div class="absolute inset-x-60 top-0 bg-gradient-to-r from-transparent via-sky-500 to-transparent h-px w-1/4"></div>
-                    
-                    <div id="sparkles-hero" class="w-full h-full"></div>
-                    
-                    <div class="absolute inset-0 w-full h-full bg-transparent [mask-image:radial-gradient(350px_200px_at_top,transparent_20%,white)]"></div>
+                <div class="relative z-10 xl:w-[55%] w-full h-full min-h-[600px] flex items-center justify-center perspective-1000">
+                    <div class="w-full h-full bg-[#0d1117] border border-slate-700 rounded-3xl shadow-2xl overflow-hidden transform rotate-y-[-6deg] rotate-x-[4deg] group-hover:rotate-y-0 group-hover:rotate-x-0 transition-transform duration-700 hover:shadow-cyan-500/10">
+                        <div class="bg-[#161b22] border-b border-slate-700 px-8 py-5 flex items-center justify-between">
+                            <div class="flex gap-3">
+                                <div class="w-3.5 h-3.5 rounded-full bg-red-500"></div>
+                                <div class="w-3.5 h-3.5 rounded-full bg-yellow-500"></div>
+                                <div class="w-3.5 h-3.5 rounded-full bg-green-500"></div>
+                            </div>
+                            <div class="text-sm font-mono text-slate-500 flex gap-6"><span class="text-white">App.tsx</span><span>style.css</span></div>
+                        </div>
+                        <div class="grid grid-cols-2 h-full">
+                            <div class="p-10 font-mono text-xs md:text-sm leading-loose border-r border-slate-800 text-slate-400 bg-[#0d1117]/50 backdrop-blur-sm">
+                                <div><span class="token-keyword">export</span> <span class="token-keyword">default</span> <span class="token-function">App</span>() {</div>
+                                <div class="pl-6"><span class="token-keyword">return</span> (</div>
+                                <div class="pl-10">&lt;<span class="token-function">Canvas</span> <span class="token-keyword">shadows</span>&gt;</div>
+                                <div class="pl-14">&lt;<span class="token-function">Stage</span> <span class="token-keyword">environment</span>=<span class="token-string">"city"</span>&gt;</div>
+                                <div class="pl-20 text-cyan-400 animate-pulse">// Loading 3D Assets...</div>
+                                <div class="pl-14">&lt;/<span class="token-function">Stage</span>&gt;</div>
+                                <div class="pl-10">&lt;/<span class="token-function">Canvas</span>&gt;</div>
+                                <div class="pl-6">);</div>
+                                <div>}</div>
+                            </div>
+                            <div class="relative bg-gradient-to-br from-slate-900 to-black flex items-center justify-center overflow-hidden">
+                                <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+                                <div class="relative z-10 w-48 h-48 border-2 border-dashed border-cyan-500/30 rounded-full flex items-center justify-center animate-[spin_10s_linear_infinite]">
+                                    <div class="w-32 h-32 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-full shadow-[0_0_80px_rgba(6,182,212,0.4)]"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid lg:grid-cols-2 gap-16">
+    
+                <div class="bento-card p-1 h-[550px] relative overflow-hidden group">
+                    <div class="absolute top-0 left-0 w-full p-10 z-20 flex justify-between items-start bg-gradient-to-b from-[#0d1117] to-transparent">
+                        <div>
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Live Revenue</p>
+                            <h3 class="text-6xl font-black text-white">$2,400<span class="text-3xl text-slate-600">.00</span></h3>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] text-slate-500 font-mono">CONVERSION</p>
+                            <p class="text-xl font-bold text-emerald-400">4.2%</p>
+                        </div>
+                    </div>
+                    <div class="absolute inset-0 pt-32 flex items-end">
+                        <div class="absolute inset-0" style="background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 40px 40px; opacity: 0.5;"></div>
+                        <svg viewBox="0 0 1200 400" class="w-full h-full" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="chartHome" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#06b6d4" stop-opacity="0.2"/><stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/></linearGradient>
+                                <filter id="glowHome"><feGaussianBlur stdDeviation="4" result="blur" /><feComposite in="SourceGraphic" in2="blur" operator="over" /></filter>
+                            </defs>
+                            <path d="M0,400 L0,300 C150,300 150,200 300,220 C450,240 450,100 600,120 C750,140 750,50 900,80 C1050,110 1050,200 1200,180 L1200,400 Z" fill="url(#chartHome)" />
+                            <path d="M0,300 C150,300 150,200 300,220 C450,240 450,100 600,120 C750,140 750,50 900,80 C1050,110 1050,200 1200,180" fill="none" stroke="#22d3ee" stroke-width="3" filter="url(#glowHome)" stroke-dasharray="2000" stroke-dashoffset="0"><animate attributeName="stroke-dashoffset" from="2000" to="0" dur="3s" fill="freeze" calcMode="spline" keySplines="0.4 0 0.2 1" /></path>
+                            <line x1="0" y1="0" x2="0" y2="400" stroke="rgba(255,255,255,0.1)" stroke-width="1"><animate attributeName="x1" values="0;1200;0" dur="10s" repeatCount="indefinite" /><animate attributeName="x2" values="0;1200;0" dur="10s" repeatCount="indefinite" /></line>
+                        </svg>
+                    </div>
                 </div>
 
-            <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mt-10 leading-relaxed">
-                Get custom, hand-coded websites that deliver speed and unique design, beating the limitations of proprietary builders.
-                </p>
+                <div class="bento-card h-[550px] relative overflow-hidden group flex items-center justify-center p-12">
+                    <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
+                    <div class="absolute inset-0 p-16 flex flex-col gap-8 opacity-30 blur-2xl pointer-events-none">
+                        <div class="w-full h-16 bg-slate-700 rounded-2xl"></div>
+                        <div class="flex gap-8 h-full"><div class="w-1/4 bg-slate-700/50 rounded-2xl"></div><div class="w-3/4 bg-slate-700/50 rounded-2xl"></div></div>
+                    </div>
+                    <div class="relative z-20 text-center flex flex-col items-center gap-10">
+                        <div class="w-32 h-32 bg-[#0d1117] border border-slate-600 rounded-[2rem] flex items-center justify-center shadow-2xl relative"><div class="absolute inset-0 bg-blue-500/20 blur-xl rounded-full animate-pulse"></div><i data-lucide="lock" class="w-12 h-12 text-slate-200 relative z-10"></i></div>
+                        <div class="space-y-4">
+                            <h3 class="text-5xl font-black text-white tracking-tight">Project: <span class="blur-[6px] text-cyan-200">STEALTH</span></h3>
+                            <p class="text-lg text-slate-400 font-mono tracking-widest text-opacity-70">// DEVELOPMENT_IN_PROGRESS</p>
+                        </div>
+                        <div class="px-8 py-3 bg-gradient-to-r from-slate-800 to-slate-900 border border-slate-700 rounded-full shadow-lg mt-4"><span class="text-sm font-extrabold text-cyan-400 uppercase tracking-[0.25em] animate-pulse">Coming Soon</span></div>
+                    </div>
+                </div>
+            </div>
 
-                <button class="mt-8 group relative inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-lg font-semibold transition-all duration-300 shadow-[0_0_20px_-5px_rgba(37,99,235,0.5)] hover:shadow-[0_0_25px_-5px_rgba(37,99,235,0.6)]">
-                    START PROJECT INQUIRY
-                    <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
-                </button>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                <div class="bento-card p-12 flex flex-col gap-6 group hover:bg-slate-800/50 transition-colors">
+                    <div class="text-base font-mono text-cyan-400 border-b border-white/5 pb-6 mb-2 flex justify-between"><span>01</span><i data-lucide="cpu" class="w-6 h-6 opacity-50"></i></div>
+                    <h4 class="text-3xl font-bold text-white group-hover:text-cyan-300 transition-colors">Web Applications</h4>
+                    <p class="text-base text-slate-400 leading-relaxed max-w-sm">Full-stack React/Next.js systems with complex database integration.</p>
+                </div>
+                <div class="bento-card p-12 flex flex-col gap-6 group hover:bg-slate-800/50 transition-colors">
+                    <div class="text-base font-mono text-cyan-400 border-b border-white/5 pb-6 mb-2 flex justify-between"><span>02</span><i data-lucide="box" class="w-6 h-6 opacity-50"></i></div>
+                    <h4 class="text-3xl font-bold text-white group-hover:text-cyan-300 transition-colors">3D Experiences</h4>
+                    <p class="text-base text-slate-400 leading-relaxed max-w-sm">Immersive WebGL & Three.js environments that increase user engagement.</p>
+                </div>
+                <div class="bento-card p-12 flex flex-col gap-6 group hover:bg-slate-800/50 transition-colors">
+                    <div class="text-base font-mono text-cyan-400 border-b border-white/5 pb-6 mb-2 flex justify-between"><span>03</span><i data-lucide="cloud" class="w-6 h-6 opacity-50"></i></div>
+                    <h4 class="text-3xl font-bold text-white group-hover:text-cyan-300 transition-colors">DevOps & Scale</h4>
+                    <p class="text-base text-slate-400 leading-relaxed max-w-sm">Automated CI/CD deployment pipelines via Vercel or AWS.</p>
+                </div>
+            </div>
+
+            <div class="bento-card p-1 z-10 mx-auto w-full max-w-5xl">
+                <div class="bg-[#0d1117] rounded-[28px] p-16 flex flex-col items-center text-center">
+                    <h2 class="text-5xl font-black text-white mb-6">Ready to ship?</h2>
+                    <form class="w-full max-w-3xl space-y-6 text-left">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <input type="text" placeholder="NAME" class="w-full bg-[#161b22] border border-slate-700 text-white text-base font-bold rounded-xl p-5 outline-none focus:border-cyan-500">
+                            <input type="email" placeholder="EMAIL" class="w-full bg-[#161b22] border border-slate-700 text-white text-base font-bold rounded-xl p-5 outline-none focus:border-cyan-500">
+                        </div>
+                        <textarea rows="4" placeholder="PROJECT_BRIEF..." class="w-full bg-[#161b22] border border-slate-700 text-white text-base font-bold rounded-xl p-8 outline-none resize-none focus:border-cyan-500"></textarea>
+                        <button type="button" class="w-full btn-primary mt-8 text-xl hover:bg-cyan-50 py-5">INITIALIZE REQUEST</button>
+                    </form>
+                </div>
             </div>
         </div>
-    </section>
 
-    <section class="py-20 px-6">
-        <div class="max-w-6xl mx-auto">
-            <div class="text-center mb-16">
-                <h2 class="text-2xl md:text-3xl font-bold text-white mb-3">
-                    Your Advantage with Custom Code
-                </h2>
-                <p class="text-slate-400">
-                    Why hand-coded websites win over templates and builders.
-                </p>
+        <div id="websites" class="view-section space-y-16">
+            <div class="text-center space-y-4 max-w-4xl mx-auto">
+                <h1 class="text-7xl font-black tracking-tighter text-white uppercase">Websites</h1>
+                <p class="text-xl text-slate-400">High-performance digital real estate.</p>
             </div>
+            
+            <div class="grid lg:grid-cols-3 gap-8">
+                <div class="bento-card p-8 flex flex-col relative group hover:border-slate-500 transition-colors">
+                    <div class="mb-4"><span class="text-xs font-bold text-slate-400 uppercase tracking-widest border border-slate-700 px-3 py-1 rounded-full">Starter</span></div>
+                    <div class="flex items-baseline gap-1 mb-6"><span class="text-4xl font-black text-white">$100</span><span class="text-sm text-slate-500">/ one-time</span></div>
+                    <p class="text-sm text-slate-400 mb-8 h-12">Perfect for personal portfolios or simple landing pages.</p>
+                    <ul class="space-y-4 mb-8 flex-1">
+                        <li class="flex items-center gap-3 text-sm text-slate-300"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Single Page Site</li>
+                        <li class="flex items-center gap-3 text-sm text-slate-300"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Mobile Responsive</li>
+                        <li class="flex items-center gap-3 text-sm text-slate-300"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Contact Form</li>
+                    </ul>
+                    <button class="w-full py-4 rounded-xl border border-slate-700 text-white font-bold hover:bg-white hover:text-black transition-all">Select Basic</button>
+                </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="electric-border bg-card border border-slate-800 rounded-2xl hover:border-slate-700 transition-colors group">
-                    <div class="eb-content p-8">
-                        <div class="w-12 h-12 bg-slate-800/50 rounded-lg flex items-center justify-center mb-6 group-hover:bg-slate-800 transition-colors">
-                            <i data-lucide="rocket" class="text-pink-500"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mb-3">Maximum Performance</h3>
-                        <p class="text-slate-400 text-sm leading-relaxed">
-                            Lean, clean code ensures lightning-fast load speeds, crucial for conversion and SEO.
-                        </p>
+                <div class="bento-card p-8 flex flex-col relative group border-cyan-500/50 bg-cyan-900/10">
+                    <div class="absolute inset-0 bg-cyan-500/5 animate-pulse"></div>
+                    <div class="relative z-10">
+                        <div class="mb-4 flex justify-between items-center"><span class="text-xs font-bold text-cyan-400 uppercase tracking-widest border border-cyan-500/50 px-3 py-1 rounded-full bg-cyan-900/20">Standard</span><span class="text-[10px] font-bold text-white bg-cyan-500 px-2 py-0.5 rounded">POPULAR</span></div>
+                        <div class="flex items-baseline gap-1 mb-6"><span class="text-5xl font-black text-white">$200</span><span class="text-sm text-slate-500">/ one-time</span></div>
+                        <p class="text-sm text-cyan-100/70 mb-8 h-12">For small businesses needing a professional presence.</p>
+                        <ul class="space-y-4 mb-8 flex-1">
+                            <li class="flex items-center gap-3 text-sm text-white"><i data-lucide="check" class="w-4 h-4 text-cyan-400"></i> Up to 5 Pages</li>
+                            <li class="flex items-center gap-3 text-sm text-white"><i data-lucide="check" class="w-4 h-4 text-cyan-400"></i> SEO Optimization</li>
+                            <li class="flex items-center gap-3 text-sm text-white"><i data-lucide="check" class="w-4 h-4 text-cyan-400"></i> Analytics Setup</li>
+                        </ul>
+                        <button class="w-full py-4 rounded-xl bg-cyan-500 text-white font-bold hover:bg-cyan-400 transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)]">Select Standard</button>
                     </div>
                 </div>
 
-                <div class="electric-border bg-card border border-slate-800 rounded-2xl hover:border-slate-700 transition-colors group">
-                    <div class="eb-content p-8">
-                        <div class="w-12 h-12 bg-slate-800/50 rounded-lg flex items-center justify-center mb-6 group-hover:bg-slate-800 transition-colors">
-                            <i data-lucide="layers" class="text-green-500"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mb-3">Unbeatable Value</h3>
-                        <p class="text-slate-400 text-sm leading-relaxed">
-                            You have the option for a subscription, or a one time purchase to be customized to your liking.
-                        </p>
-                    </div>
+                <div class="bento-card p-8 flex flex-col relative group hover:border-purple-500/50 transition-colors">
+                    <div class="mb-4"><span class="text-xs font-bold text-purple-400 uppercase tracking-widest border border-purple-500/30 px-3 py-1 rounded-full">Premium</span></div>
+                    <div class="flex items-baseline gap-1 mb-6"><span class="text-4xl font-black text-white">$400</span><span class="text-sm text-slate-500">/ one-time</span></div>
+                    <p class="text-sm text-slate-400 mb-8 h-12">High-end bespoke design with advanced functionality.</p>
+                    <ul class="space-y-4 mb-8 flex-1">
+                        <li class="flex items-center gap-3 text-sm text-slate-300"><i data-lucide="check" class="w-4 h-4 text-purple-400"></i> Unlimited Pages</li>
+                        <li class="flex items-center gap-3 text-sm text-slate-300"><i data-lucide="check" class="w-4 h-4 text-purple-400"></i> 3D / WebGL Elements</li>
+                        <li class="flex items-center gap-3 text-sm text-slate-300"><i data-lucide="check" class="w-4 h-4 text-purple-400"></i> CMS Integration</li>
+                    </ul>
+                    <button class="w-full py-4 rounded-xl border border-slate-700 text-white font-bold hover:border-purple-500 hover:text-purple-400 transition-all">Select Premium</button>
                 </div>
+            </div>
+        </div>
 
-                <div class="electric-border bg-card border border-slate-800 rounded-2xl hover:border-slate-700 transition-colors group">
-                    <div class="eb-content p-8">
-                        <div class="w-12 h-12 bg-slate-800/50 rounded-lg flex items-center justify-center mb-6 group-hover:bg-slate-800 transition-colors">
-                            <i data-lucide="sparkles" class="text-amber-400"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mb-3">Bespoke Design</h3>
-                        <p class="text-slate-400 text-sm leading-relaxed">
-                            A one-of-a-kind site tailored specifically to your brand identity, not a stock theme.
-                        </p>
+        <div id="apps" class="view-section space-y-20">
+            <div class="text-center space-y-6 max-w-4xl mx-auto">
+                <h1 class="text-7xl font-black tracking-tighter text-white uppercase">Web Apps</h1>
+                <p class="text-2xl text-slate-400">Complex, data-driven applications running in the browser.</p>
+            </div>
+            <div class="bento-card p-12 h-[550px] flex flex-col relative overflow-hidden">
+                <div class="glow-overlay"></div>
+                <div class="relative z-10 mb-8"><div class="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center mb-6"><i data-lucide="smartphone" class="w-8 h-8 text-blue-400"></i></div><h3 class="text-4xl font-black text-white">Upcoming Apps</h3></div>
+                <div class="relative z-10 space-y-6">
+                    <div class="bg-[#0d1117] border border-slate-700 p-6 rounded-2xl flex items-center gap-6 hover:border-blue-500/50 transition-colors cursor-pointer group">
+                        <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg"><i data-lucide="sparkles" class="w-7 h-7 text-white"></i></div>
+                        <div class="flex-1"><div class="text-xl font-bold text-white group-hover:text-blue-400 transition-colors">Lumina AI</div><div class="text-sm text-slate-500">Photo Enhancer</div></div>
+                        <span class="text-xs font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20 px-3 py-1 rounded">BETA</span>
                     </div>
                 </div>
             </div>
         </div>
-    </section>
 
-    <section class="py-20 px-6">
-        <div class="max-w-xl mx-auto">
-            <div class="text-center mb-10">
-                <h2 class="text-2xl md:text-3xl font-bold text-white">
-                    Start Your Project Inquiry
-                </h2>
-            </div>
+    </main>
 
-            <div class="bg-card border border-slate-800 p-8 rounded-2xl shadow-xl">
-                <form class="space-y-4">
-                    <div>
-                        <input type="text" placeholder="Your Name" class="w-full bg-[#1F2937] border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
-                    </div>
-                    <div>
-                        <input type="email" placeholder="Your Email" class="w-full bg-[#1F2937] border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
-                    </div>
-                    <div>
-                        <textarea rows="4" placeholder="Tell me about your site idea..." class="w-full bg-[#1F2937] border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none"></textarea>
-                    </div>
-                    
-                    <button class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg font-semibold text-sm transition-colors w-full sm:w-auto">
-                        Send Message
-                    </button>
-                </form>
-            </div>
-        </div>
-    </section>
-
-    <footer class="py-8 text-center border-t border-white/5">
-        <p class="text-slate-500 text-xs">
-            © 2025 TheWebsiteGuy | All Rights Reserved | Built with <span class="text-blue-500">code</span>.
+    <footer class="py-16 text-center border-t border-white/5 bg-[#0d1117]/80 backdrop-blur-md">
+        <p class="text-slate-500 text-sm font-mono tracking-[0.25em]">
+            // THEWEBSITEGUY_SYSTEM_V3 // <span class="text-cyan-500">ONLINE</span>
         </p>
     </footer>
 
+    <div id="bg-toggle-root" class="fixed bottom-10 right-10 z-50"></div>
+
+    <script>
+        function updateCards(e) {
+            const cards = document.getElementsByClassName("bento-card");
+            for(const card of cards) {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty("--mouse-x", `${x}px`);
+                card.style.setProperty("--mouse-y", `${y}px`);
+            }
+        }
+        document.addEventListener("DOMContentLoaded", () => {
+            lucide.createIcons();
+            
+            // Handle Navigation
+            const handleHashChange = () => {
+                const hash = window.location.hash || '#home';
+                
+                // Hide all sections
+                document.querySelectorAll('.view-section').forEach(el => {
+                    el.classList.remove('active');
+                    el.style.display = 'none';
+                });
+
+                // Show active section
+                const activeSection = document.querySelector(hash);
+                if (activeSection) {
+                    activeSection.style.display = 'block';
+                    setTimeout(() => activeSection.classList.add('active'), 10);
+                }
+
+                // Update Nav Styles
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    if(link.getAttribute('href') === hash) link.classList.add('text-white');
+                    else link.classList.remove('text-white');
+                });
+                
+                window.scrollTo(0, 0);
+            };
+            
+            window.addEventListener('hashchange', handleHashChange);
+            handleHashChange(); // Run on load
+        });
+    </script>
+
     <script type="text/babel" data-type="module">
-        import React, { useEffect, useId, useState, useRef } from "https://esm.sh/react@18.2.0";
+        import React, { useEffect, useState } from "https://esm.sh/react@18.2.0";
         import { createRoot } from "https://esm.sh/react-dom@18.2.0/client";
         import Particles, { initParticlesEngine } from "https://esm.sh/@tsparticles/react@3.0.0?external=react,react-dom";
         import { loadSlim } from "https://esm.sh/@tsparticles/slim@3.9.1";
-        import { motion, useAnimation } from "https://esm.sh/framer-motion@12.23.26?external=react,react-dom";
-        import clsx from "https://esm.sh/clsx@2.1.1";
-        import { twMerge } from "https://esm.sh/tailwind-merge@3.4.0";
 
-        const cn = (...inputs) => twMerge(clsx(...inputs));
-
-        const SparklesCore = (props) => {
-            const { id, className, background, minSize, maxSize, speed, particleColor, particleDensity } = props;
+        const Sparkles = () => {
             const [init, setInit] = useState(false);
-            const moveSpeed = speed ? { min: speed * 0.5, max: speed } : { min: 0.1, max: 1 };
-            const opacitySpeed = speed ? Math.max(speed * 2, 4) : 4;
-
-            useEffect(() => {
-                initParticlesEngine(async (engine) => {
-                    await loadSlim(engine);
-                }).then(() => {
-                    setInit(true);
-                });
-            }, []);
-
-            const controls = useAnimation();
-
-            const particlesLoaded = async (container) => {
-                if (container) {
-                    controls.start({
-                        opacity: 1,
-                        transition: {
-                            duration: 1,
-                        },
-                    });
-                }
-            };
-
-            const generatedId = useId();
+            useEffect(() => { initParticlesEngine(async (engine) => await loadSlim(engine)).then(() => setInit(true)); }, []);
+            if(!init) return null;
             return (
-                <motion.div animate={controls} className={cn("opacity-0", className)}>
-                    {init && (
-                        <Particles
-                            id={id || generatedId}
-                            className={cn("h-full w-full")}
-                            particlesLoaded={particlesLoaded}
-                            options={{
-                                background: {
-                                    color: {
-                                        value: background || "#0d47a1",
-                                    },
-                                },
-                                fullScreen: {
-                                    enable: false,
-                                    zIndex: 1,
-                                },
-                                fpsLimit: 120,
-                                interactivity: {
-                                    events: {
-                                        onClick: {
-                                            enable: true,
-                                            mode: "push",
-                                        },
-                                        onHover: {
-                                            enable: false,
-                                            mode: "repulse",
-                                        },
-                                        resize: true,
-                                    },
-                                    modes: {
-                                        push: {
-                                            quantity: 4,
-                                        },
-                                        repulse: {
-                                            distance: 200,
-                                            duration: 0.4,
-                                        },
-                                    },
-                                },
-                                particles: {
-                                    bounce: {
-                                        horizontal: { value: 1 },
-                                        vertical: { value: 1 },
-                                    },
-                                    collisions: {
-                                        absorb: { speed: 2 },
-                                        bounce: {
-                                            horizontal: { value: 1 },
-                                            vertical: { value: 1 },
-                                        },
-                                        enable: false,
-                                        maxSpeed: 50,
-                                        mode: "bounce",
-                                        overlap: { enable: true, retries: 0 },
-                                    },
-                                    color: {
-                                        value: particleColor || "#ffffff",
-                                        animation: {
-                                            h: { count: 0, enable: false, speed: 1, decay: 0, delay: 0, sync: true, offset: 0 },
-                                            s: { count: 0, enable: false, speed: 1, decay: 0, delay: 0, sync: true, offset: 0 },
-                                            l: { count: 0, enable: false, speed: 1, decay: 0, delay: 0, sync: true, offset: 0 },
-                                        },
-                                    },
-                                    effect: {
-                                        close: true,
-                                        fill: true,
-                                        options: {},
-                                        type: undefined,
-                                    },
-                                    groups: {},
-                                    move: {
-                                        angle: { offset: 0, value: 90 },
-                                        attract: { distance: 200, enable: false, rotate: { x: 3000, y: 3000 } },
-                                        center: { x: 50, y: 50, mode: "percent", radius: 0 },
-                                        decay: 0,
-                                        distance: {},
-                                        direction: "none",
-                                        drift: 0,
-                                        enable: true,
-                                        gravity: { acceleration: 9.81, enable: false, inverse: false, maxSpeed: 50 },
-                                        path: { clamp: true, delay: { value: 0 }, enable: false, options: {} },
-                                        outModes: { default: "out" },
-                                        random: false,
-                                        size: false,
-                                        speed: moveSpeed,
-                                        spin: { acceleration: 0, enable: false },
-                                        straight: false,
-                                        trail: { enable: false, length: 10, fill: {} },
-                                        vibrate: false,
-                                        warp: false,
-                                    },
-                                    number: {
-                                        density: { enable: true, width: 400, height: 400 },
-                                        limit: { mode: "delete", value: 0 },
-                                        value: particleDensity || 120,
-                                    },
-                                    opacity: {
-                                        value: { min: 0.1, max: 1 },
-                                        animation: {
-                                            count: 0,
-                                            enable: true,
-                                            speed: opacitySpeed,
-                                            decay: 0,
-                                            delay: 0,
-                                            sync: false,
-                                            mode: "auto",
-                                            startValue: "random",
-                                            destroy: "none",
-                                        },
-                                    },
-                                    reduceDuplicates: false,
-                                    shadow: {
-                                        blur: 0,
-                                        color: { value: "#000" },
-                                        enable: false,
-                                        offset: { x: 0, y: 0 },
-                                    },
-                                    shape: {
-                                        close: true,
-                                        fill: true,
-                                        options: {},
-                                        type: "circle",
-                                    },
-                                    size: {
-                                        value: { min: minSize || 1, max: maxSize || 3 },
-                                        animation: {
-                                            count: 0,
-                                            enable: false,
-                                            speed: 5,
-                                            decay: 0,
-                                            delay: 0,
-                                            sync: false,
-                                            mode: "auto",
-                                            startValue: "random",
-                                            destroy: "none",
-                                        },
-                                    },
-                                    stroke: { width: 0 },
-                                    zIndex: { value: 0, opacityRate: 1, sizeRate: 1, velocityRate: 1 },
-                                    destroy: {
-                                        bounds: {},
-                                        mode: "none",
-                                        split: {
-                                            count: 1,
-                                            factor: { value: 3 },
-                                            rate: { value: { min: 4, max: 9 } },
-                                            sizeOffset: true,
-                                        },
-                                    },
-                                    roll: {
-                                        darken: { enable: false, value: 0 },
-                                        enable: false,
-                                        enlighten: { enable: false, value: 0 },
-                                        mode: "vertical",
-                                        speed: 25,
-                                    },
-                                    tilt: {
-                                        value: 0,
-                                        animation: { enable: false, speed: 0, decay: 0, sync: false },
-                                        direction: "clockwise",
-                                        enable: false,
-                                    },
-                                    twinkle: {
-                                        lines: { enable: false, frequency: 0.05, opacity: 1 },
-                                        particles: { enable: false, frequency: 0.05, opacity: 1 },
-                                    },
-                                    wobble: {
-                                        distance: 5,
-                                        enable: false,
-                                        speed: { angle: 50, move: 10 },
-                                    },
-                                    life: {
-                                        count: 0,
-                                        delay: { value: 0, sync: false },
-                                        duration: { value: 0, sync: false },
-                                    },
-                                    rotate: {
-                                        value: 0,
-                                        animation: { enable: false, speed: 0, decay: 0, sync: false },
-                                        direction: "clockwise",
-                                        path: false,
-                                    },
-                                    orbit: {
-                                        animation: { count: 0, enable: false, speed: 1, decay: 0, delay: 0, sync: false },
-                                        enable: false,
-                                        opacity: 1,
-                                        rotation: { value: 45 },
-                                        width: 1,
-                                    },
-                                    links: {
-                                        blink: false,
-                                        color: { value: "#fff" },
-                                        consent: false,
-                                        distance: 100,
-                                        enable: false,
-                                        frequency: 1,
-                                        opacity: 1,
-                                        shadow: { blur: 5, color: { value: "#000" }, enable: false },
-                                        triangles: { enable: false, frequency: 1 },
-                                        width: 1,
-                                        warp: false,
-                                    },
-                                    repulse: { value: 0, enabled: false, distance: 1, duration: 1, factor: 1, speed: 1 },
-                                },
-                                detectRetina: true,
-                            }}
-                        />
-                    )}
-                </motion.div>
-            );
-        };
-
-        // --- HELPER FUNCTIONS FOR PHYSICS & MATH ---
-
-        const parseColor = (color) => {
-            const div = document.createElement("div");
-            div.style.color = color;
-            document.body.appendChild(div);
-            const rgba = window.getComputedStyle(div).color;
-            document.body.removeChild(div);
-            const match = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
-            if (match) {
-                return `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${match[4] || 1})`;
-            }
-            return "rgba(255, 255, 255, 1)";
-        };
-
-        const calculateVaporizeSpread = (fontSize) => {
-            const size = typeof fontSize === "string" ? parseInt(fontSize) : fontSize;
-            const points = [{ size: 20, spread: 0.2 }, { size: 50, spread: 0.5 }, { size: 100, spread: 1.5 }];
-            if (size <= points[0].size) return points[0].spread;
-            if (size >= points[points.length - 1].size) return points[points.length - 1].spread;
-            let i = 0;
-            while (i < points.length - 1 && points[i + 1].size < size) i++;
-            const p1 = points[i];
-            const p2 = points[i + 1];
-            return p1.spread + (size - p1.size) * (p2.spread - p1.spread) / (p2.size - p1.size);
-        };
-
-        // Physics update logic
-        const updateParticles = (particles, vaporizeX, deltaTime, spread, duration, direction) => {
-            let allVaporized = true;
-            particles.forEach(p => {
-                const shouldVaporize = direction === "left-to-right" ? p.originalX <= vaporizeX : p.originalX >= vaporizeX;
-                
-                if (shouldVaporize) {
-                    if (p.speed === 0) {
-                        // Initialize explosion
-                        p.angle = Math.random() * Math.PI * 2;
-                        p.speed = (Math.random() * 1 + 0.5) * spread;
-                        p.vx = Math.cos(p.angle) * p.speed;
-                        p.vy = Math.sin(p.angle) * p.speed;
-                    }
-
-                    // Apply Physics
-                    const dx = p.originalX - p.x;
-                    const dy = p.originalY - p.y;
-                    const dist = Math.sqrt(dx*dx + dy*dy);
-                    const damping = Math.max(0.95, 1 - dist / (100 * spread)); // Drag
-
-                    p.vx = (p.vx + (Math.random() - 0.5) * spread * 3) * damping;
-                    p.vy = (p.vy + (Math.random() - 0.5) * spread * 3) * damping;
-
-                    p.x += p.vx * deltaTime * 20;
-                    p.y += p.vy * deltaTime * 10;
-                    
-                    // Fade out
-                    p.opacity = Math.max(0, p.opacity - deltaTime * (0.5 * (2000/duration)));
-                    
-                    if (p.opacity > 0.01) allVaporized = false;
-                } else {
-                    allVaporized = false;
-                }
-            });
-            return allVaporized;
-        };
-
-        const VaporizeTextCycle = React.memo((props) => {
-            const {
-                texts = ["Build Smarter.", "Build Faster."],
-                font = { fontFamily: "Inter, sans-serif", fontSize: "80px", fontWeight: 700 },
-                color = "#ffffff",
-                spread = 5,
-                density = 5,
-                animation = { duration: 1.5, delay: 0.5 }, // Interpreted as vaporizeDuration and waitDuration
-                alignment = "center",
-            } = props;
-
-            const canvasRef = useRef(null);
-            const containerRef = useRef(null);
-            const particlesRef = useRef([]);
-            const animationFrameRef = useRef(null);
-            
-            // State
-            const [currentTextIndex, setCurrentTextIndex] = useState(0);
-            const [phase, setPhase] = useState("static"); // static, vaporizing, fadingIn, waiting
-            const [wrapperSize, setWrapperSize] = useState({ width: 0, height: 0 });
-            
-            // Refs for animation progress
-            const progressRef = useRef(0);
-            const fadeOpacityRef = useRef(0);
-
-            // 1. Handle Resize
-            useEffect(() => {
-                const handleResize = () => {
-                    if (containerRef.current) {
-                        setWrapperSize({
-                            width: containerRef.current.clientWidth,
-                            height: containerRef.current.clientHeight
-                        });
-                    }
-                };
-                handleResize();
-                window.addEventListener("resize", handleResize);
-                return () => window.removeEventListener("resize", handleResize);
-            }, []);
-
-            // 2. Main Animation Loop
-            useEffect(() => {
-                if (!wrapperSize.width) return;
-                const canvas = canvasRef.current;
-                const ctx = canvas?.getContext("2d");
-                if (!canvas || !ctx) return;
-
-                // Configuration
-                const dpr = window.devicePixelRatio || 1;
-                const vaporizeDuration = (animation.duration || 2) * 1000;
-                const fadeInDuration = 1000;
-                const waitDuration = (animation.delay || 0.5) * 1000;
-                
-                // Font setup
-                const fontSizeVal = parseInt(font.fontSize?.replace("px", "") || "80", 10);
-                const calcSpread = calculateVaporizeSpread(fontSizeVal) * spread;
-                const fontStr = `${font.fontWeight || 700} ${fontSizeVal * dpr}px ${font.fontFamily || "Inter, sans-serif"}`;
-                
-                let lastTime = performance.now();
-
-                // PARTICLE CREATION
-                const createParticles = () => {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.fillStyle = parseColor(color);
-                    ctx.font = fontStr;
-                    ctx.textAlign = alignment;
-                    ctx.textBaseline = "middle";
-                    
-                    const x = alignment === "center" ? canvas.width/2 : alignment === "left" ? 0 : canvas.width;
-                    const y = canvas.height/2;
-                    const text = texts[currentTextIndex];
-                    
-                    // Get text metrics for scanning
-                    const metrics = ctx.measureText(text);
-                    const textWidth = metrics.width;
-                    let textLeft = alignment === "center" ? x - textWidth/2 : alignment === "left" ? x : x - textWidth;
-                    
-                    canvas.textMeta = { left: textLeft, width: textWidth };
-
-                    // Draw and sample
-                    ctx.fillText(text, x, y);
-                    const idata = ctx.getImageData(0,0, canvas.width, canvas.height);
-                    const data = idata.data;
-                    ctx.clearRect(0,0, canvas.width, canvas.height); // clear after sampling
-
-                    const newParticles = [];
-                    const step = Math.max(1, Math.floor(10 - (density || 5)));
-                    
-                    for(let py=0; py<canvas.height; py+=step) {
-                        for(let px=0; px<canvas.width; px+=step) {
-                            const idx = (py * canvas.width + px) * 4;
-                            if(data[idx+3] > 0) {
-                                newParticles.push({
-                                    x: px, y: py,
-                                    originalX: px, originalY: py,
-                                    color: `rgba(${data[idx]},${data[idx+1]},${data[idx+2]},`,
-                                    opacity: data[idx+3]/255,
-                                    originalAlpha: data[idx+3]/255,
-                                    vx: 0, vy: 0, speed: 0
-                                });
-                            }
-                        }
-                    }
-                    particlesRef.current = newParticles;
-                };
-
-                // SETUP CANVAS
-                canvas.width = wrapperSize.width * dpr;
-                canvas.height = wrapperSize.height * dpr;
-                canvas.style.width = wrapperSize.width + "px";
-                canvas.style.height = wrapperSize.height + "px";
-                ctx.scale(1, 1); // We handled dpr in sampling
-
-                // Initial Create
-                if (phase === 'static' || phase === 'waiting') {
-                    createParticles();
-                    // Auto-start animation logic
-                    setTimeout(() => setPhase("vaporizing"), 100); 
-                }
-
-                // RENDER LOOP
-                const render = (time) => {
-                    const dt = (time - lastTime) / 1000;
-                    lastTime = time;
-                    
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                    if (phase === "static") {
-                        particlesRef.current.forEach(p => {
-                            ctx.fillStyle = p.color + p.opacity + ")";
-                            ctx.fillRect(p.x, p.y, 2, 2); // Slightly larger particles
-                        });
-                    }
-                    else if (phase === "vaporizing") {
-                        progressRef.current += dt * 100 / (vaporizeDuration/1000);
-                        const progress = Math.min(100, progressRef.current);
-                        const meta = canvas.textMeta || {left: 0, width: canvas.width};
-                        const vaporizeX = meta.left + meta.width * (progress/100);
-
-                        const finished = updateParticles(particlesRef.current, vaporizeX, dt, calcSpread, vaporizeDuration, "left-to-right");
-                        
-                        particlesRef.current.forEach(p => {
-                            if(p.opacity > 0) {
-                                ctx.fillStyle = p.color + p.opacity + ")";
-                                ctx.fillRect(p.x, p.y, 2, 2);
-                            }
-                        });
-
-                        if (progress >= 100 && finished) {
-                            setCurrentTextIndex(prev => (prev + 1) % texts.length);
-                            setPhase("fadingIn");
-                            fadeOpacityRef.current = 0;
-                        }
-                    }
-                    else if (phase === "fadingIn") {
-                        fadeOpacityRef.current += dt * 1000 / fadeInDuration;
-                        // Re-draw text with opacity
-                        ctx.fillStyle = parseColor(color);
-                        ctx.font = fontStr;
-                        ctx.textAlign = alignment;
-                        ctx.textBaseline = "middle";
-                        ctx.globalAlpha = Math.min(1, fadeOpacityRef.current);
-                        const x = alignment === "center" ? canvas.width/2 : alignment === "left" ? 0 : canvas.width;
-                        ctx.fillText(texts[currentTextIndex], x, canvas.height/2);
-                        ctx.globalAlpha = 1;
-
-                        if (fadeOpacityRef.current >= 1) {
-                            setPhase("waiting");
-                            setTimeout(() => {
-                                progressRef.current = 0;
-                                setPhase("vaporizing");
-                                // Re-create particles for the NEW text
-                                createParticles();
-                            }, waitDuration);
-                        }
-                    }
-                    else if (phase === "waiting") {
-                         // Just draw the text
-                        ctx.fillStyle = parseColor(color);
-                        ctx.font = fontStr;
-                        ctx.textAlign = alignment;
-                        ctx.textBaseline = "middle";
-                        const x = alignment === "center" ? canvas.width/2 : alignment === "left" ? 0 : canvas.width;
-                        ctx.fillText(texts[currentTextIndex], x, canvas.height/2);
-                    }
-
-                    animationFrameRef.current = requestAnimationFrame(render);
-                };
-
-                animationFrameRef.current = requestAnimationFrame(render);
-
-                return () => {
-                    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-                };
-
-            }, [phase, wrapperSize, texts, currentTextIndex, font, color, spread, density, animation, alignment]);
-
-            return (
-                <div ref={containerRef} className="w-full h-full relative">
-                    <canvas ref={canvasRef} className="block" />
-                </div>
-            );
-        });
-
-        const vaporizeContainer = document.getElementById("vaporize-text-cycle");
-        if (vaporizeContainer) {
-            const vaporizeRoot = createRoot(vaporizeContainer);
-            vaporizeRoot.render(
-                <VaporizeTextCycle
-                    texts={["Build Smarter."]}
-                    font={{ fontFamily: "Inter, sans-serif", fontSize: "80px", fontWeight: 700 }}
-                    color="#ffffff"
-                    spread={3}
-                    density={8}
-                    animation={{ duration: 2, delay: 0.5 }}
-                    alignment="center"
+                <Particles id="tsparticles" className="w-full h-full"
+                    options={{
+                        background: { color: { value: "transparent" } }, fpsLimit: 120,
+                        interactivity: { events: { onHover: { enable: true, mode: "grab" } }, modes: { grab: { distance: 200, links: { opacity: 0.5 } } } },
+                        particles: {
+                            color: { value: "#ffffff" }, links: { enable: true, color: "#ffffff", opacity: 0.15, distance: 150 },
+                            move: { enable: true, speed: 2, outModes: { default: "out" }, warp: true },
+                            number: { density: { enable: true, width: 800, height: 800 }, value: 100 },
+                            opacity: { value: { min: 0.1, max: 0.7 }, animation: { enable: true, speed: 1.5 } },
+                            size: { value: { min: 0.5, max: 2.5 }, animation: { enable: true, speed: 3 } },
+                            shape: { type: "circle" },
+                        }, detectRetina: true
+                    }}
                 />
             );
-        }
-
-        const sparklesContainer = document.getElementById("sparkles-hero");
-        if (sparklesContainer) {
-            const root = createRoot(sparklesContainer);
-            root.render(
-                <SparklesCore
-                    background="transparent"
-                    minSize={0.6}
-                    maxSize={1.4}
-                    particleDensity={100}
-                    className="w-full h-full"
-                    particleColor="#FFFFFF"
-                />
-            );
-        }
+        };
+        createRoot(document.getElementById('react-bg-container')).render(<Sparkles />);
     </script>
 
-    <script>
-        lucide.createIcons();
-    </script>
     <script>
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        
         renderer.setSize(window.innerWidth, window.innerHeight);
         container.appendChild(renderer.domElement);
-
         const material = new THREE.ShaderMaterial({
-            uniforms: {
-                iTime: { value: 0 },
-                iResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
-            },
-            vertexShader: `
-                void main() {
-                    gl_Position = vec4(position, 1.0);
-                }
-            `,
+            uniforms: { iTime: { value: 0 }, iResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) } },
+            vertexShader: `void main() { gl_Position = vec4(position, 1.0); }`,
             fragmentShader: `
-                uniform float iTime;
-                uniform vec2 iResolution;
-                #define NUM_OCTAVES 3
-
-                float rand(vec2 n) { return fract(sin(dot(n, vec2(12.9898, 4.1414))) * 43758.5453); }
-                float noise(vec2 p) {
-                    vec2 ip = floor(p);
-                    vec2 u = fract(p);
-                    u = u*u*(3.0-2.0*u);
-                    float res = mix(
-                        mix(rand(ip), rand(ip + vec2(1.0, 0.0)), u.x),
-                        mix(rand(ip + vec2(0.0, 1.0)), rand(ip + vec2(1.0, 1.0)), u.x), u.y);
-                    return res * res;
-                }
-                float fbm(vec2 x) {
-                    float v = 0.0;
-                    float a = 0.3;
-                    vec2 shift = vec2(100);
-                    mat2 rot = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.5));
-                    for (int i = 0; i < NUM_OCTAVES; ++i) {
-                        v += a * noise(x);
-                        x = rot * x * 2.0 + shift;
-                        a *= 0.4;
-                    }
-                    return v;
-                }
+                uniform float iTime; uniform vec2 iResolution;
                 void main() {
-                    vec2 shake = vec2(sin(iTime * 1.2) * 0.005, cos(iTime * 2.1) * 0.005);
-                    vec2 p = ((gl_FragCoord.xy + shake * iResolution.xy) - iResolution.xy * 0.5) / iResolution.y * mat2(6.0, -4.0, 4.0, 6.0);
-                    vec2 v;
-                    vec4 o = vec4(0.0);
-                    float f = 2.0 + fbm(p + vec2(iTime * 5.0, 0.0)) * 0.5;
-                    for (float i = 0.0; i < 35.0; i++) {
-                        v = p + cos(i * i + (iTime + p.x * 0.08) * 0.025 + i * vec2(13.0, 11.0)) * 3.5 + vec2(sin(iTime * 3.0 + i) * 0.003, cos(iTime * 3.5 - i) * 0.003);
-                        float tailNoise = fbm(v + vec2(iTime * 0.5, i)) * 0.3 * (1.0 - (i / 35.0));
-                        vec4 auroraColors = vec4(
-                            0.1 + 0.3 * sin(i * 0.2 + iTime * 0.4),
-                            0.3 + 0.5 * cos(i * 0.3 + iTime * 0.5),
-                            0.7 + 0.3 * sin(i * 0.4 + iTime * 0.3),
-                            1.0
-                        );
-                        vec4 currentContribution = auroraColors * exp(sin(i * i + iTime * 0.8)) / length(max(v, vec2(v.x * f * 0.015, v.y * 1.5)));
-                        float thinnessFactor = smoothstep(0.0, 1.0, i / 35.0) * 0.6;
-                        o += currentContribution * (1.0 + tailNoise * 0.8) * thinnessFactor;
-                    }
-                    o = tanh(pow(o / 100.0, vec4(1.6)));
-                    gl_FragColor = o * 1.5;
+                    vec2 uv = gl_FragCoord.xy / iResolution.xy;
+                    vec3 col = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));
+                    col *= 0.15; gl_FragColor = vec4(col, 1.0);
                 }
             `
         });
-
-        const geometry = new THREE.PlaneGeometry(2, 2);
-        const mesh = new THREE.Mesh(geometry, material);
-        scene.add(mesh);
-
-        let threeRAF = null;
-        function animate(now) {
-            material.uniforms.iTime.value = now * 0.001;
-            renderer.render(scene, camera);
-            threeRAF = requestAnimationFrame(animate);
-        }
-        function startThree() {
-            if (threeRAF == null) {
-                threeRAF = requestAnimationFrame(animate);
-            }
-        }
-        function stopThree() {
-            if (threeRAF != null) {
-                cancelAnimationFrame(threeRAF);
-                threeRAF = null;
-            }
-        }
-        stopThree();
-        window.startThree = startThree;
-        window.stopThree = stopThree;
-
-        window.addEventListener('resize', () => {
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            material.uniforms.iResolution.value.set(window.innerWidth, window.innerHeight);
-        });
+        scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material));
+        function animate(time) { material.uniforms.iTime.value = time * 0.001; renderer.render(scene, camera); requestAnimationFrame(animate); }
+        animate(0);
+        window.addEventListener('resize', () => { renderer.setSize(window.innerWidth, window.innerHeight); material.uniforms.iResolution.value.set(window.innerWidth, window.innerHeight); });
     </script>
-    <script type="text/babel" data-presets="react">
-        const { useEffect, useRef } = React;
 
-        // --- 1. SHADER SOURCE CODE ---
-        const defaultShaderSource = `#version 300 es
-        precision highp float;
-        out vec4 O;
-        uniform vec2 resolution;
-        uniform float time;
-        #define FC gl_FragCoord.xy
-        #define T time
-        #define R resolution
-        #define MN min(R.x,R.y)
-        
-        float rnd(vec2 p) {
-            p=fract(p*vec2(12.9898,78.233));
-            p+=dot(p,p+34.56);
-            return fract(p.x*p.y);
-        }
-        
-        float noise(in vec2 p) {
-            vec2 i=floor(p), f=fract(p), u=f*f*(3.-2.*f);
-            float a=rnd(i), b=rnd(i+vec2(1,0)), c=rnd(i+vec2(0,1)), d=rnd(i+1.);
-            return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);
-        }
-        
-        float fbm(vec2 p) {
-            float t=.0, a=1.; mat2 m=mat2(1.,-.5,.2,1.2);
-            for (int i=0; i<5; i++) {
-                t+=a*noise(p);
-                p*=2.*m;
-                a*=.5;
-            }
-            return t;
-        }
-        
-        float clouds(vec2 p) {
-            float d=1., t=.0;
-            for (float i=.0; i<3.; i++) {
-                float a=d*fbm(i*10.+p.x*.2+.2*(1.+i)*p.y+d+i*i+p);
-                t=mix(t,d,a);
-                d=a;
-                p*=2./(i+1.);
-            }
-            return t;
-        }
-        
-        void main(void) {
-            vec2 uv=(FC-.5*R)/MN,st=uv*vec2(2,1);
-            vec3 col=vec3(0);
-            float bg=clouds(vec2(st.x+T*.5,-st.y));
-            uv*=1.-.3*(sin(T*.2)*.5+.5);
-            for (float i=1.; i<12.; i++) {
-                uv+=.1*cos(i*vec2(.1+.01*i, .8)+i*i+T*.5+.1*uv.x);
-                vec2 p=uv;
-                float d = max(length(p), 0.12);
-                col+=.00125/d*(cos(sin(i)*vec3(1,2,3))+1.);
-                float b=noise(i+p+bg*1.731);
-                col+=.002*b/length(max(p,vec2(b*p.x*.02,p.y)));
-                col=mix(col,vec3(bg*.25,bg*.137,bg*.05),d);
-            }
-            col *= 0.75;
-            col = col / (1.0 + col);
-            O = vec4(col, 1.0);
-        }`;
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect } from "https://esm.sh/react@18.2.0";
+        import { createRoot } from "https://esm.sh/react-dom@18.2.0/client";
 
-        // --- 2. WEBGL CLASSES (Logic Helpers) ---
-        class WebGLRenderer {
-            constructor(canvas, scale) {
-                this.canvas = canvas;
-                this.scale = scale;
-                this.gl = canvas.getContext('webgl2', {
-                    alpha: true,
-                    antialias: false,
-                    powerPreference: 'high-performance',
-                });
-                this.gl.viewport(0, 0, canvas.width, canvas.height);
-                this.shaderSource = defaultShaderSource;
-                this.mouseMove = [0, 0];
-                this.mouseCoords = [0, 0];
-                this.pointerCoords = [0, 0];
-                this.nbrOfPointers = 0;
-                this.vertexSrc = `#version 300 es
-                precision highp float;
-                in vec4 position;
-                void main(){gl_Position=position;}`;
-                this.vertices = [-1, 1, -1, -1, 1, 1, 1, -1];
-            }
-
-            updateShader(source) {
-                this.reset();
-                this.shaderSource = source;
-                this.setup();
-                this.init();
-            }
-            updateMove(deltas) { this.mouseMove = deltas; }
-            updateMouse(coords) { this.mouseCoords = coords; }
-            updatePointerCoords(coords) { this.pointerCoords = coords; }
-            updatePointerCount(nbr) { this.nbrOfPointers = nbr; }
-            updateScale(scale) {
-                this.scale = scale;
-                this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-            }
-
-            compile(shader, source) {
-                const gl = this.gl;
-                gl.shaderSource(shader, source);
-                gl.compileShader(shader);
-                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-                    console.error('Shader error:', gl.getShaderInfoLog(shader));
-                }
-            }
-
-            test(source) {
-                let result = null;
-                const gl = this.gl;
-                const shader = gl.createShader(gl.FRAGMENT_SHADER);
-                gl.shaderSource(shader, source);
-                gl.compileShader(shader);
-                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-                    result = gl.getShaderInfoLog(shader);
-                }
-                gl.deleteShader(shader);
-                return result;
-            }
-
-            reset() {
-                const gl = this.gl;
-                if (this.program && !gl.getProgramParameter(this.program, gl.DELETE_STATUS)) {
-                    if (this.vs) { gl.detachShader(this.program, this.vs); gl.deleteShader(this.vs); }
-                    if (this.fs) { gl.detachShader(this.program, this.fs); gl.deleteShader(this.fs); }
-                    gl.deleteProgram(this.program);
-                }
-            }
-
-            setup() {
-                const gl = this.gl;
-                this.vs = gl.createShader(gl.VERTEX_SHADER);
-                this.fs = gl.createShader(gl.FRAGMENT_SHADER);
-                this.compile(this.vs, this.vertexSrc);
-                this.compile(this.fs, this.shaderSource);
-                this.program = gl.createProgram();
-                gl.attachShader(this.program, this.vs);
-                gl.attachShader(this.program, this.fs);
-                gl.linkProgram(this.program);
-            }
-
-            init() {
-                const gl = this.gl;
-                const program = this.program;
-                this.buffer = gl.createBuffer();
-                gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
-                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertices), gl.STATIC_DRAW);
-                const position = gl.getAttribLocation(program, 'position');
-                gl.enableVertexAttribArray(position);
-                gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
-                program.resolution = gl.getUniformLocation(program, 'resolution');
-                program.time = gl.getUniformLocation(program, 'time');
-                program.move = gl.getUniformLocation(program, 'move');
-                program.touch = gl.getUniformLocation(program, 'touch');
-                program.pointerCount = gl.getUniformLocation(program, 'pointerCount');
-                program.pointers = gl.getUniformLocation(program, 'pointers');
-            }
-
-            render(now = 0) {
-                const gl = this.gl;
-                const program = this.program;
-                if (!program || gl.getProgramParameter(program, gl.DELETE_STATUS)) return;
-                gl.clearColor(0, 0, 0, 1);
-                gl.clear(gl.COLOR_BUFFER_BIT);
-                gl.useProgram(program);
-                gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
-                gl.uniform2f(program.resolution, this.canvas.width, this.canvas.height);
-                gl.uniform1f(program.time, now * 1e-3);
-                gl.uniform2f(program.move, ...this.mouseMove);
-                gl.uniform2f(program.touch, ...this.mouseCoords);
-                gl.uniform1i(program.pointerCount, this.nbrOfPointers);
-                gl.uniform2fv(program.pointers, this.pointerCoords);
-                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-            }
-        }
-
-        class PointerHandler {
-            constructor(element, scale) {
-                this.scale = scale;
-                this.active = false;
-                this.pointers = new Map();
-                this.lastCoords = [0, 0];
-                this.moves = [0, 0];
-                const map = (element, scale, x, y) => [x * scale, element.height - y * scale];
-                
-                element.addEventListener('pointerdown', (e) => {
-                    this.active = true;
-                    this.pointers.set(e.pointerId, map(element, this.getScale(), e.clientX, e.clientY));
-                });
-                element.addEventListener('pointerup', (e) => {
-                    if (this.count === 1) this.lastCoords = this.first;
-                    this.pointers.delete(e.pointerId);
-                    this.active = this.pointers.size > 0;
-                });
-                element.addEventListener('pointerleave', (e) => {
-                    if (this.count === 1) this.lastCoords = this.first;
-                    this.pointers.delete(e.pointerId);
-                    this.active = this.pointers.size > 0;
-                });
-                element.addEventListener('pointermove', (e) => {
-                    if (!this.active) return;
-                    this.lastCoords = [e.clientX, e.clientY];
-                    this.pointers.set(e.pointerId, map(element, this.getScale(), e.clientX, e.clientY));
-                    this.moves = [this.moves[0] + e.movementX, this.moves[1] + e.movementY];
-                });
-            }
-            getScale() { return this.scale; }
-            updateScale(scale) { this.scale = scale; }
-            get count() { return this.pointers.size; }
-            get move() { return this.moves; }
-            get coords() { return this.pointers.size > 0 ? Array.from(this.pointers.values()).flat() : [0, 0]; }
-            get first() { return this.pointers.values().next().value || this.lastCoords; }
-        }
-
-        // --- 3. CUSTOM REACT HOOK ---
-        const useShaderBackground = () => {
-            const canvasRef = useRef(null);
-            const animationFrameRef = useRef();
-            const rendererRef = useRef(null);
-            const pointersRef = useRef(null);
-            const runningRef = useRef(true);
-
-            const resize = () => {
-                if (!canvasRef.current) return;
-                const canvas = canvasRef.current;
-                const dpr = Math.min(1.25, window.devicePixelRatio || 1);
-                canvas.width = Math.floor(window.innerWidth * dpr);
-                canvas.height = Math.floor(window.innerHeight * dpr);
-                if (rendererRef.current) rendererRef.current.updateScale(dpr);
-            };
-
-            const loop = (now) => {
-                if (!rendererRef.current || !pointersRef.current) return;
-                if (!runningRef.current || window.__RUN_REACT_BG === false) {
-                    runningRef.current = false;
-                    animationFrameRef.current = null;
-                    return;
-                }
-                rendererRef.current.updateMouse(pointersRef.current.first);
-                rendererRef.current.updatePointerCount(pointersRef.current.count);
-                rendererRef.current.updatePointerCoords(pointersRef.current.coords);
-                rendererRef.current.updateMove(pointersRef.current.move);
-                rendererRef.current.render(now);
-                animationFrameRef.current = requestAnimationFrame(loop);
-            };
+        const ModeToggle = () => {
+            const [isWhiteMode, setIsWhiteMode] = useState(false);
 
             useEffect(() => {
-                if (!canvasRef.current) return;
-                const canvas = canvasRef.current;
-                const dpr = Math.min(1.25, window.devicePixelRatio || 1);
-                rendererRef.current = new WebGLRenderer(canvas, dpr);
-                pointersRef.current = new PointerHandler(canvas, dpr);
-                rendererRef.current.setup();
-                rendererRef.current.init();
-                resize();
-                if (rendererRef.current.test(defaultShaderSource) === null) {
-                    rendererRef.current.updateShader(defaultShaderSource);
-                }
-                window.__RUN_REACT_BG = window.__RUN_REACT_BG !== false;
-                window.__startReactBg = () => {
-                    window.__RUN_REACT_BG = true;
-                    runningRef.current = true;
-                    if (!animationFrameRef.current) {
-                        animationFrameRef.current = requestAnimationFrame(loop);
-                    }
-                };
-                window.__stopReactBg = () => {
-                    window.__RUN_REACT_BG = false;
-                    runningRef.current = false;
-                    if (animationFrameRef.current) {
-                        cancelAnimationFrame(animationFrameRef.current);
-                        animationFrameRef.current = null;
-                    }
-                };
-                animationFrameRef.current = requestAnimationFrame(loop);
-                window.addEventListener('resize', resize);
-                return () => {
-                    window.removeEventListener('resize', resize);
-                    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-                    if (rendererRef.current) rendererRef.current.reset();
-                    window.__startReactBg = undefined;
-                    window.__stopReactBg = undefined;
-                };
-            }, []);
+                const cards = document.querySelectorAll('.bento-card');
+                cards.forEach(card => card.classList.toggle('white-mode-card', isWhiteMode));
+                document.body.classList.toggle('white-mode', isWhiteMode);
+            }, [isWhiteMode]);
 
-            return canvasRef;
-        };
-
-        // --- 4. REACT COMPONENT ---
-        const ShaderBackground = () => {
-            const canvasRef = useShaderBackground();
             return (
-                <canvas 
-                    ref={canvasRef} 
-                    className="absolute inset-0 w-full h-full object-cover" 
-                    style={{ background: 'transparent' }}
-                />
+                <button
+                    id="bg-toggle-btn"
+                    onClick={() => setIsWhiteMode(prev => !prev)}
+                    className="w-40 h-12 bg-black border border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.6)] text-white font-mono font-bold rounded-full flex items-center justify-center transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+                >
+                    Toggle
+                </button>
             );
         };
 
-        // --- 5. MOUNT & TOGGLE LOGIC ---
-        const root = ReactDOM.createRoot(document.getElementById('react-bg-container'));
-        root.render(<ShaderBackground />);
-
-        // Toggle Button Logic
-        const toggleBtn = document.getElementById('bg-toggle-btn');
-        const threeJsCanvas = document.getElementById('canvas-container');
-        const reactContainer = document.getElementById('react-bg-container');
-        let showing = 'react';
-        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-        const fadeTo = (next) => {
-            if (next === showing) return;
-            if (window.startThree) window.startThree();
-            if (window.__startReactBg) window.__startReactBg();
-
-            const from = next === 'react' ? threeJsCanvas : reactContainer;
-            const to = next === 'react' ? reactContainer : threeJsCanvas;
-
-            from.classList.remove('is-on');
-            from.classList.add('is-off');
-            to.classList.remove('is-off');
-            to.classList.add('is-on');
-
-            const complete = () => {
-                if (next === 'react') {
-                    if (window.stopThree) window.stopThree();
-                } else {
-                    if (window.__stopReactBg) window.__stopReactBg();
-                }
-                showing = next;
-            };
-
-            if (prefersReducedMotion) {
-                complete();
-                return;
-            }
-
-            const onDone = (e) => {
-                if (e.propertyName !== 'opacity') return;
-                from.removeEventListener('transitionend', onDone);
-                complete();
-            };
-            from.addEventListener('transitionend', onDone);
-        };
-
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', () => {
-                fadeTo(showing === 'react' ? 'three' : 'react');
-            });
+        const toggleRoot = document.getElementById('bg-toggle-root');
+        if (toggleRoot) {
+            createRoot(toggleRoot).render(<ModeToggle />);
         }
-    </script>
-
-    <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const cards = document.querySelectorAll('.electric-border');
-
-      cards.forEach((card) => {
-        const id = 'eb-' + Math.random().toString(36).substr(2, 9);
-        const filterId = 'turbulent-displace-' + id;
-
-        const svgNS = "http://www.w3.org/2000/svg";
-        const svg = document.createElementNS(svgNS, "svg");
-        svg.setAttribute("class", "eb-svg");
-        svg.innerHTML = `
-          <defs>
-            <filter id="${filterId}" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
-              <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="3" result="noise1" seed="1" />
-              <feOffset in="noise1" dx="0" dy="0" result="offsetNoise1">
-                <animate attributeName="dy" values="0; 0" dur="2s" repeatCount="indefinite" />
-              </feOffset>
-              <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="3" result="noise2" seed="2" />
-              <feOffset in="noise2" dx="0" dy="0" result="offsetNoise2">
-                 <animate attributeName="dy" values="0; 0" dur="2s" repeatCount="indefinite" />
-              </feOffset>
-              <feComposite in="offsetNoise1" in2="offsetNoise2" result="part1" operator="xor"/>
-              <feDisplacementMap in="SourceGraphic" in2="part1" scale="20" xChannelSelector="R" yChannelSelector="G" />
-            </filter>
-          </defs>
-        `;
-
-        const layers = document.createElement('div');
-        layers.className = 'eb-layers';
-        layers.innerHTML = `
-          <div class="eb-stroke" style="filter: url(#${filterId});"></div>
-          <div class="eb-glow-1" style="filter: url(#${filterId}) blur(2px);"></div>
-          <div class="eb-glow-2" style="filter: url(#${filterId}) blur(5px);"></div>
-        `;
-
-        card.prepend(layers);
-        card.prepend(svg);
-
-        const animateEl = svg.querySelectorAll('animate');
-        
-        const update = () => {
-          const w = card.offsetWidth;
-          const h = card.offsetHeight;
-          animateEl[0]?.setAttribute('values', `${h}; 0`);
-          animateEl[1]?.setAttribute('values', `0; -${h}`);
-        };
-
-        const ro = new ResizeObserver(update);
-        ro.observe(card);
-        update();
-      });
-    });
-    </script>
-
-    <script>
-        const menuToggle = document.getElementById('menuToggle');
-        const mobileMenu = document.getElementById('mobileMenu');
-
-        // Toggle menu visibility
-        menuToggle.addEventListener('click', (e) => {
-            e.stopPropagation();
-            mobileMenu.classList.toggle('hidden');
-            mobileMenu.classList.toggle('flex');
-        });
-
-        // Close menu when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!menuToggle.contains(e.target) && !mobileMenu.contains(e.target)) {
-                mobileMenu.classList.add('hidden');
-                mobileMenu.classList.remove('flex');
-            }
-        });
     </script>
 </body>
 </html>
